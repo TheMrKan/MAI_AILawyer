@@ -9,7 +9,8 @@ package-mode = false
 
 requires-python = "3.12.10"
 dependencies = [
-    "fastapi[standard] (>=0.118.0,<0.119.0)"
+    "fastapi[standard] (>=0.118.0,<0.119.0)",
+    "langgraph (>=0.6.8,<0.7.0)"
 ]
 
 

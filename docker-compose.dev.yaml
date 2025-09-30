@@ -1,0 +1,13 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      target: app_dev
+    container_name: backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./backend/src:/app/src"
+    restart: no

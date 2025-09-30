@@ -5,10 +5,11 @@ description = ""
 authors = [
     {name = "TheMrKan",email = "mrkan2017@gmail.com"}
 ]
-readme = "README.md"
+package-mode = false
+
 requires-python = "3.12.10"
 dependencies = [
-    "fastapi (>=0.118.0,<0.119.0)"
+    "fastapi[standard] (>=0.118.0,<0.119.0)"
 ]
 
 

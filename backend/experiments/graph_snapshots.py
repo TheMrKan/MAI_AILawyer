@@ -1,6 +1,4 @@
-import json
-
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import TypedDict
 from langgraph.graph import StateGraph, START, END
@@ -8,16 +6,18 @@ from langgraph.types import interrupt, Command
 from langgraph.checkpoint.memory import InMemorySaver
 
 
+class InputState(TypedDict):
+    first_description: str
+
+
 class State(TypedDict):
-    user_input: str
     message_history: list[str]
     acts: list[str]
     is_user_agreed: bool
 
 
-
-def process_first_info(state: State):
-    return {"user_input": "", "message_history": [state["user_input"]]}
+def process_first_info(state: InputState):
+    return {"message_history": [state["first_description"]]}
 
 
 def find_acts(state: State):
@@ -29,13 +29,17 @@ def analyze(state: State):
 
 
 def process_response(state: State):
-    response = interrupt("Продолжаем? ")
+    new_messages = []
+    response = interrupt(None)
+    new_messages.append(response)
+
+    result = {"message_history": state["message_history"] + new_messages}
     if response == "YES":
-        return {"is_user_agreed": True}
+        result.update({"is_user_agreed": True})
     elif response == "NO":
-        return {"is_user_agreed": False}
-    else:
-        return {}
+        result.update({"is_user_agreed": False})
+
+    return result
 
 
 def is_input_ready(state: State):
@@ -49,11 +53,10 @@ def is_input_ready(state: State):
 
 
 def cont(state: State):
-    print("Продолжаем работу...")
-    return {}
+    return {"message_history": state["message_history"] + ["Продолжаем работу..."]}
 
 
-workflow = StateGraph(State)
+workflow = StateGraph(State, input_schema=InputState)
 
 
 workflow.add_node("process_first_info", process_first_info)
@@ -78,26 +81,30 @@ memory = InMemorySaver()
 
 graph = workflow.compile(checkpointer=memory)
 
-thread = {"configurable": {"thread_id": "1"}}
+app = FastAPI()
 
-command = {"user_input": "Моя проблема"}
 
-while True:
+class ChatRequest(BaseModel):
+    message: str
 
-    question = None
-    for event in graph.stream(command, thread, stream_mode="updates"):
-        if "__interrupt__" not in event:
-            print(event)
-            continue
 
-        question = event["__interrupt__"][0].value
+@app.post("/chat/{chat_id}/")
+async def chat_handler(chat_id: int, request: ChatRequest):
+    # invoke graph
+    graph_config = {"configurable": {"thread_id": chat_id}}
+    graph_state = await graph.aget_state(graph_config)
 
-    print(graph.get_state(thread).interrupts)    # Если список не пустой, то диалог был прерван, т. е. возобновляем с resume
+    if graph_state.created_at is None:
+        graph_input = InputState(first_description=request.message)
+    elif not any(graph_state.next):
+        raise HTTPException(status_code=403, detail="Chat ended")
+    else:
+        graph_input = Command(resume=request.message)
 
-    if not question:
-        print("No question found")
-        break
+    try:
+        result = await graph.ainvoke(graph_input, graph_config)
+        response_message = result["message_history"][-1]
+    except Exception as e:
+        response_message = f"[ERROR] {str(e)}"
 
-    response = input(question)
-    question = None
-    command = Command(resume=response)
+    return {"answer": response_message}

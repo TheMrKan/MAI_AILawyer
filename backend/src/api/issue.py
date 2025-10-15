@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from enum import Enum
+import traceback
 
 from src.core import issue_graph
 from src.core.issue_graph import GraphError
@@ -12,15 +13,14 @@ class AddUserMessage(BaseModel):
     text: str
 
 
-class MessageType(Enum):
+class MessageRole(Enum):
     USER = "user"
     BOT = "bot"
 
 
 class Message(BaseModel):
-    id: int
     message: str
-    type: MessageType
+    role: MessageRole
 
 
 class ChatHistoryFragment(BaseModel):
@@ -30,11 +30,14 @@ class ChatHistoryFragment(BaseModel):
 @router.post('/chat/')
 async def chat(issue_id: int, message: AddUserMessage) -> ChatHistoryFragment:
     try:
-        new_messages = [{"id": 1, "message": t, "type": MessageType.BOT} for t in await issue_graph.invoke_with_new_message(issue_id, message.text)]
+        messages = await issue_graph.invoke_with_new_message(issue_id, message.text)
+        fragment = [{"message": m.text(), "role": MessageRole.BOT.value if issue_graph.is_ai_message(m) else MessageRole.USER.value}
+                    for m in messages]
     except GraphError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except Exception:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Произошла непредвиденная ошибка")
 
-    return {"new_messages": new_messages}
+    return {"new_messages": fragment}
 

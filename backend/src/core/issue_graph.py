@@ -2,7 +2,9 @@ from typing import TypedDict
 from langgraph.graph import StateGraph, START, END, MessagesState
 from langgraph.types import interrupt, Command, StateSnapshot
 from langgraph.checkpoint.memory import InMemorySaver
-from langchain_core.messages import HumanMessage, AIMessage, AnyMessage
+from langchain_core.messages import HumanMessage, AIMessage, AnyMessage, SystemMessage
+
+from src.core.container import Container
 
 
 class InputState(TypedDict):
@@ -18,8 +20,17 @@ class GraphError(Exception):
     pass
 
 
-def process_first_info(state: InputState):
-    return {"messages": [HumanMessage(state["first_description"])]}
+SYSTEM_MESSAGE = SystemMessage(content="Ты помогаешь пользователю составить юридически грамотную жалобу или обращение. Далее пользователь опишет проблему. Не нужно рассказывать о себе и говорить, какова твоя задача. Сразу переходи к сути.")
+
+
+async def process_first_info(state: InputState):
+    first_user_message = HumanMessage(state["first_description"])
+    prompt = [SYSTEM_MESSAGE, first_user_message]
+    ai_response = await Container.LLM_instance.invoke_async(
+        messages=prompt,
+    )
+
+    return {"messages": [first_user_message, ai_response]}
 
 
 def find_acts(state: State):
@@ -80,8 +91,8 @@ workflow.add_edge("cont", END)
 
 memory = InMemorySaver()
 
-
 graph = workflow.compile(checkpointer=memory)
+
 
 async def invoke_with_new_message(thread_id: int, message_text: str) -> list[AnyMessage]:
     graph_config = {"configurable": {"thread_id": thread_id}}

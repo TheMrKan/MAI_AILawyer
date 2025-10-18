@@ -4,6 +4,7 @@ from langgraph.types import interrupt, Command, StateSnapshot
 from langgraph.checkpoint.memory import InMemorySaver
 
 from src.core.container import Container
+from src.core.llm_use_cases import LLMUseCases
 from src.dto.messages import ChatMessage
 
 
@@ -29,25 +30,21 @@ class GraphError(Exception):
     pass
 
 
-SYSTEM_MESSAGE = ChatMessage.from_system("Ты помогаешь пользователю составить юридически грамотную жалобу или обращение. Далее пользователь опишет проблему. Не нужно рассказывать о себе и говорить, какова твоя задача. Сразу переходи к сути.")
-
-
-async def process_first_info(state: InputState):
+async def analyze_first_info(state: InputState):
     first_user_message = ChatMessage.from_user(state["first_description"])
-    prompt = [SYSTEM_MESSAGE, first_user_message]
-    ai_response = await Container.LLM_instance.invoke_async(
-        messages=prompt,
-    )
 
-    return {"messages": [first_user_message, ai_response]}
+    analysis_result = await LLMUseCases(Container.LLM_instance).analyze_first_description_async(first_user_message)
+
+    return {"messages": [first_user_message, analysis_result]}
 
 
 def find_acts(state: State):
     return {"acts": ["Закон 1234", "Закон 456"]}
 
 
-def analyze(state: State):
-    return {"messages": [ChatMessage.from_ai(f"Вот такие я нашел: {state['acts']}. Всё нормально. Вас устраивает?")]}
+async def analyze_acts(state: State):
+    acts_analysis_result = await LLMUseCases(Container.LLM_instance).analyze_acts_async(state["messages"], state["acts"])
+    return {"messages": [ChatMessage.from_ai(f"Вот такие акты нашлись в моей базе: {state['acts']}"), acts_analysis_result]}
 
 
 def process_response(state: State):
@@ -81,9 +78,9 @@ def cont(state: State):
 workflow = StateGraph(State, input_schema=InputState)
 
 
-workflow.add_node("process_first_info", process_first_info)
+workflow.add_node("process_first_info", analyze_first_info)
 workflow.add_node("find_acts", find_acts)
-workflow.add_node("analyze", analyze)
+workflow.add_node("analyze", analyze_acts)
 workflow.add_node("process_response", process_response)
 workflow.add_node("cont", cont)
 

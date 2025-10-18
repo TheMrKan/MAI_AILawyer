@@ -2,42 +2,46 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from enum import Enum
 import traceback
+from typing import Self
 
 from src.core import issue_graph
-from src.core.issue_graph import GraphError
+from src.dto.messages import ChatMessage, MessageRole as DtoMessageRole
 
 router = APIRouter(prefix="/issue/{issue_id}")
 
 
-class AddUserMessage(BaseModel):
+class AddUserMessageSchema(BaseModel):
     text: str
 
 
 class MessageRole(Enum):
     USER = "user"
-    BOT = "bot"
+    AI = "ai"
 
 
-class Message(BaseModel):
-    message: str
+class MessageSchema(BaseModel):
     role: MessageRole
+    text: str
+
+    @classmethod
+    def from_dto(cls, dto: ChatMessage) -> Self:
+        assert dto.role in (DtoMessageRole.USER, DtoMessageRole.AI), f"Only User and AI messages are allowed (got '{dto.role}')"
+        return {"text": dto.text, "role": MessageRole.USER.value if dto.role == DtoMessageRole.USER else MessageRole.AI.value}
 
 
-class ChatHistoryFragment(BaseModel):
-    new_messages: list[Message]
+class ChatUpdateSchema(BaseModel):
+    new_messages: list[MessageSchema]
 
 
 @router.post('/chat/')
-async def chat(issue_id: int, message: AddUserMessage) -> ChatHistoryFragment:
+async def chat(issue_id: int, message: AddUserMessageSchema) -> ChatUpdateSchema:
     try:
-        messages = await issue_graph.invoke_with_new_message(issue_id, message.text)
-        fragment = [{"message": m.text(), "role": MessageRole.BOT.value if issue_graph.is_ai_message(m) else MessageRole.USER.value}
-                    for m in messages]
-    except GraphError as e:
+        dto_messages = await issue_graph.invoke_with_new_message(issue_id, message.text)
+        new_messages = [MessageSchema.from_dto(message) for message in dto_messages]
+    except issue_graph.GraphError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Произошла непредвиденная ошибка")
 
-    return {"new_messages": fragment}
-
+    return ChatUpdateSchema(new_messages=new_messages)

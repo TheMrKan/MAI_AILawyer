@@ -7,9 +7,12 @@ authors = [
 ]
 package-mode = false
 
-requires-python = "3.12.10"
+requires-python = ">=3.12,<3.13"
 dependencies = [
-    "fastapi[standard] (>=0.118.0,<0.119.0)"
+    "fastapi[standard] (>=0.118.0,<0.119.0)",
+    "langgraph (>=0.6.10,<0.7.0)",
+    "langchain (==0.3.27)",
+    "cerebras-cloud-sdk (==1.50.1)"
 ]
 
 

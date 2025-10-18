@@ -1,15 +1,27 @@
-from typing import TypedDict
+from typing import TypedDict, Annotated
 from langgraph.graph import StateGraph, START, END, MessagesState
 from langgraph.types import interrupt, Command, StateSnapshot
 from langgraph.checkpoint.memory import InMemorySaver
-from langchain_core.messages import HumanMessage, AIMessage, AnyMessage
+
+from src.core.container import Container
+from src.core.llm_use_cases import LLMUseCases
+from src.dto.messages import ChatMessage
 
 
 class InputState(TypedDict):
     first_description: str
 
 
-class State(MessagesState):
+def _add_messages_to_state(left: list[ChatMessage], right: list[ChatMessage] | ChatMessage) -> list[ChatMessage]:
+    if isinstance(right, ChatMessage):
+        return left + [right]
+
+    return left + right
+
+
+class State(TypedDict):
+    # Annotated и add_messages обеспечивает добавление новых сообщений в конец списка, вместо перезаписи всего списка
+    messages: Annotated[list[ChatMessage], _add_messages_to_state]
     acts: list[str]
     is_user_agreed: bool
 
@@ -18,22 +30,27 @@ class GraphError(Exception):
     pass
 
 
-def process_first_info(state: InputState):
-    return {"messages": [HumanMessage(state["first_description"])]}
+async def analyze_first_info(state: InputState):
+    first_user_message = ChatMessage.from_user(state["first_description"])
+
+    analysis_result = await LLMUseCases(Container.LLM_instance).analyze_first_description_async(first_user_message)
+
+    return {"messages": [first_user_message, analysis_result]}
 
 
 def find_acts(state: State):
     return {"acts": ["Закон 1234", "Закон 456"]}
 
 
-def analyze(state: State):
-    return {"messages": [AIMessage(f"Вот такие я нашел: {state['acts']}. Всё нормально. Вас устраивает?")]}
+async def analyze_acts(state: State):
+    acts_analysis_result = await LLMUseCases(Container.LLM_instance).analyze_acts_async(state["messages"], state["acts"])
+    return {"messages": [ChatMessage.from_ai(f"Вот такие акты нашлись в моей базе: {state['acts']}"), acts_analysis_result]}
 
 
 def process_response(state: State):
     new_messages = []
     response = interrupt(None)
-    new_messages.append(HumanMessage(response))
+    new_messages.append(ChatMessage.from_user(response))
 
     result = {"messages": new_messages}
     if response == "YES":
@@ -55,15 +72,15 @@ def is_input_ready(state: State):
 
 
 def cont(state: State):
-    return {"messages": [AIMessage("Продолжаем работу...")]}
+    return {"messages": [ChatMessage.from_ai("Продолжаем работу...")]}
 
 
 workflow = StateGraph(State, input_schema=InputState)
 
 
-workflow.add_node("process_first_info", process_first_info)
+workflow.add_node("process_first_info", analyze_first_info)
 workflow.add_node("find_acts", find_acts)
-workflow.add_node("analyze", analyze)
+workflow.add_node("analyze", analyze_acts)
 workflow.add_node("process_response", process_response)
 workflow.add_node("cont", cont)
 
@@ -80,10 +97,10 @@ workflow.add_edge("cont", END)
 
 memory = InMemorySaver()
 
-
 graph = workflow.compile(checkpointer=memory)
 
-async def invoke_with_new_message(thread_id: int, message_text: str) -> list[AnyMessage]:
+
+async def invoke_with_new_message(thread_id: int, message_text: str) -> list[ChatMessage]:
     graph_config = {"configurable": {"thread_id": thread_id}}
     graph_state = await graph.aget_state(graph_config)
 
@@ -108,7 +125,3 @@ def __is_exists(graph_state: StateSnapshot) -> bool:
 
 def __is_ended(graph_state: StateSnapshot) -> bool:
     return not any(graph_state.next)
-
-
-def is_ai_message(message: AnyMessage) -> bool:
-    return isinstance(message, AIMessage)

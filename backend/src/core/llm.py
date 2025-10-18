@@ -1,15 +1,15 @@
 from abc import ABC, abstractmethod
-from langchain_core.messages import AnyMessage, AIMessage
 from typing import Iterable
-
 from cerebras.cloud.sdk import AsyncCerebras
 from cerebras.cloud.sdk.types.chat.chat_completion import ChatCompletionResponseChoiceMessage
+
+from src.dto.messages import ChatMessage, MessageRole
 
 
 class AbstractLLM(ABC):
 
     @abstractmethod
-    async def invoke_async(self, messages: Iterable[AnyMessage]) -> AIMessage:
+    async def invoke_async(self, messages: Iterable[ChatMessage]) -> ChatMessage:
         pass
 
 
@@ -17,13 +17,11 @@ class AbstractLLM(ABC):
 class CerebrasLLM(AbstractLLM):
 
     ROLES_MAP = {
-        "system": "system",
-        "human": "user",
-        "ai": "assistant"
+        MessageRole.SYSTEM: "system",
+        MessageRole.USER: "user",
+        MessageRole.AI: "assistant"
     }
-    """
-    LangChain : Cerebras
-    """
+
     MODEL = "qwen-3-235b-a22b-thinking-2507"
 
     cerebras: AsyncCerebras
@@ -31,7 +29,7 @@ class CerebrasLLM(AbstractLLM):
     def __init__(self):
         self.cerebras = AsyncCerebras()
 
-    async def invoke_async(self, messages: Iterable[AnyMessage]) -> AIMessage:
+    async def invoke_async(self, messages: Iterable[ChatMessage]) -> ChatMessage:
         response = await self.cerebras.chat.completions.create(
             messages = [self.__serialize_message(m) for m in messages],
             model = self.MODEL
@@ -39,13 +37,13 @@ class CerebrasLLM(AbstractLLM):
         return self.__deserialize_ai_message(response.choices[0].message)
 
     @classmethod
-    def __serialize_message(cls, message: AnyMessage) -> dict[str, object]:
+    def __serialize_message(cls, message: ChatMessage) -> dict[str, object]:
         return {
-            "content": message.content,
-            "role": cls.ROLES_MAP[message.type],
+            "content": message.text,
+            "role": cls.ROLES_MAP[message.role],
         }
 
     @classmethod
-    def __deserialize_ai_message(cls, message: ChatCompletionResponseChoiceMessage) -> AIMessage:
+    def __deserialize_ai_message(cls, message: ChatCompletionResponseChoiceMessage) -> ChatMessage:
         assert message.role == "assistant", f"Invalid AI role: {message.role}"
-        return AIMessage(message.content)
+        return ChatMessage.from_ai(message.content)

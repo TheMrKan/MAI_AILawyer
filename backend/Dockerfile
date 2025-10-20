@@ -2,16 +2,9 @@
 FROM python:3.12.10-slim AS deps
 WORKDIR /app
 
-RUN apt update && apt install -y --no-install-recommends build-essential \
-    && apt-get clean # удаляет кэш списка пакетов из apt update \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*    # удаляет кэши пакетов после apt install
+COPY requirements.txt ./
 
-RUN pip install poetry --no-cache-dir
-COPY pyproject.toml poetry.lock ./
-
-# ставим только продовые зависимости без создания окружения
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --only main --no-root --no-cache
+RUN pip install -r requirements.txt --no-cache-dir
 
 
 ### Слой кода приложения (для разработки)

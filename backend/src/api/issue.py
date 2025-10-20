@@ -4,7 +4,8 @@ from enum import Enum
 import traceback
 from typing import Self
 
-from src.core import issue_graph
+from src.core.graph_controller import GraphError
+from src.core.container import Container
 from src.dto.messages import ChatMessage, MessageRole as DtoMessageRole
 
 router = APIRouter(prefix="/issue/{issue_id}")
@@ -36,9 +37,9 @@ class ChatUpdateSchema(BaseModel):
 @router.post('/chat/')
 async def chat(issue_id: int, message: AddUserMessageSchema) -> ChatUpdateSchema:
     try:
-        dto_messages = await issue_graph.invoke_with_new_message(issue_id, message.text)
+        dto_messages = await Container.graph_controller.invoke_with_new_message(issue_id, message.text)
         new_messages = [MessageSchema.from_dto(message) for message in dto_messages]
-    except issue_graph.GraphError as e:
+    except GraphError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         traceback.print_exc()

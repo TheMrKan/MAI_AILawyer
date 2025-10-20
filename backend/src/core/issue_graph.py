@@ -1,7 +1,6 @@
 from typing import TypedDict, Annotated
 from langgraph.graph import StateGraph, START, END
-from langgraph.types import interrupt, Command, StateSnapshot
-from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.types import interrupt
 
 from src.core.container import Container
 from src.core.llm_use_cases import LLMUseCases
@@ -24,10 +23,6 @@ class State(TypedDict):
     messages: Annotated[list[ChatMessage], _add_messages_to_state]
     acts: list[str]
     is_user_agreed: bool
-
-
-class GraphError(Exception):
-    pass
 
 
 class IssueGraph(StateGraph[State, None, InputState]):
@@ -100,35 +95,3 @@ class IssueGraph(StateGraph[State, None, InputState]):
     @staticmethod
     def cont(state: State):
         return {"messages": [ChatMessage.from_ai("Продолжаем работу...")]}
-
-
-workflow = IssueGraph()
-memory = InMemorySaver()
-graph = workflow.compile(checkpointer=memory)
-
-
-async def invoke_with_new_message(thread_id: int, message_text: str) -> list[ChatMessage]:
-    graph_config = {"configurable": {"thread_id": thread_id}}
-    graph_state = await graph.aget_state(graph_config)
-
-    skip_messages = 0
-
-    if not __is_exists(graph_state):
-        graph_input = InputState(first_description=message_text)
-    elif __is_ended(graph_state):
-        raise GraphError("Чат завершен")
-    else:
-        graph_input = Command(resume=message_text)
-        history = graph_state.values.get("messages", [])
-        skip_messages = len(history)
-
-    result = await graph.ainvoke(graph_input, graph_config)
-    return result["messages"][skip_messages:]
-
-
-def __is_exists(graph_state: StateSnapshot) -> bool:
-    return graph_state.created_at is not None
-
-
-def __is_ended(graph_state: StateSnapshot) -> bool:
-    return not any(graph_state.next)

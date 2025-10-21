@@ -1,10 +1,14 @@
 from typing import TypedDict, Annotated
+import logging
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
 
 from src.core.container import Container
 from src.core.llm_use_cases import LLMUseCases
 from src.dto.messages import ChatMessage
+
+
+logger = logging.getLogger(__name__)
 
 
 class InputState(TypedDict):
@@ -56,22 +60,27 @@ class IssueGraph(StateGraph[State, None, InputState]):
         system_message = LLMUseCases(Container.LLM_instance).get_start_system_message()
         first_user_message = ChatMessage.from_user(state["first_description"])
 
+        logger.info(f"Saving first message: {state["first_description"]}")
         return {"messages": [system_message, first_user_message]}
 
     @staticmethod
     async def __find_law_documents(state: State):
         docs = await Container.laws_repo.find_fragments_async(state["messages"][0].text)
         message = LLMUseCases(Container.LLM_instance).add_acts_to_dialogue(docs)
+
+        logger.info(f"Saving message with documents: \n{message.text}")
         return {"messages": message, "acts": docs}
 
     @staticmethod
     async def __analyze_first_info(state: State):
         acts_analysis_result = await LLMUseCases(Container.LLM_instance).analyze_acts_async(state["messages"])
+        logger.info(f"Acts analysis result: {acts_analysis_result}")
         return {"can_help": acts_analysis_result.can_help, "messages": ChatMessage.from_ai(acts_analysis_result.resume_for_user)}
 
     @staticmethod
     def __continue_if_true(key: str):
         def wrapper(state: State):
+            logger.info(f"Edge check true ({key}): {state[key]}")
             if not state[key]:
                 return "END"
 
@@ -83,9 +92,10 @@ class IssueGraph(StateGraph[State, None, InputState]):
         user_input = interrupt(None)
         user_message = ChatMessage.from_user(user_input)
         is_confirmed = await LLMUseCases(Container.LLM_instance).is_agreement_async(user_message)
+        logger.info(f"Got user confirmation input ({is_confirmed}): {user_input}")
         return {"confirmation_0": is_confirmed, "messages": ChatMessage.from_user(user_input)}
 
     @staticmethod
     async def __tmp_continue(state: State):
-        print("CONTINUE")
+        logger.info("CONTINUE")
 

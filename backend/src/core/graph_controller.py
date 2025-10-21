@@ -44,6 +44,11 @@ class GraphController:
         result = await self.graph.ainvoke(graph_input, graph_config)
         return result["messages"][skip_messages:]
 
+    async def is_ended(self, thread_id: int) -> bool:
+        graph_config = {"configurable": {"thread_id": thread_id}}
+        graph_state = await self.graph.aget_state(graph_config)
+        return self.__is_ended(graph_state)
+
     @staticmethod
     def __is_exists(graph_state: StateSnapshot) -> bool:
         return graph_state.created_at is not None

@@ -35,11 +35,15 @@ class IssueGraph(StateGraph[State, None, InputState]):
         self.add_node("save_first_info", self.__save_first_info)
         self.add_node("find_law_documents", self.__find_law_documents)
         self.add_node("analyze_first_info", self.__analyze_first_info)
+        self.add_node("request_confirmation_0", self.__request_confirmation_0)
 
         self.add_edge(START, "save_first_info")
         self.add_edge("save_first_info", "find_law_documents")
         self.add_edge("find_law_documents", "analyze_first_info")
-        self.add_edge("analyze_first_info", END)
+        self.add_conditional_edges("analyze_first_info", self.__continue_if_can_help, {
+            "continue": "request_confirmation_0",
+            "END": END
+        })
 
     @staticmethod
     async def __save_first_info(state: InputState):
@@ -59,3 +63,13 @@ class IssueGraph(StateGraph[State, None, InputState]):
         acts_analysis_result = await LLMUseCases(Container.LLM_instance).analyze_acts_async(state["messages"])
         return {"can_help": acts_analysis_result.can_help, "messages": ChatMessage.from_ai(acts_analysis_result.resume_for_user)}
 
+    @staticmethod
+    async def __continue_if_can_help(state: State):
+        if not state["can_help"]:
+            return "END"
+
+        return "continue"
+
+    @staticmethod
+    async def __request_confirmation_0(state: InputState):
+        user_input = interrupt(None)

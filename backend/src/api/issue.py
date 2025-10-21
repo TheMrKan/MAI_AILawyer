@@ -32,6 +32,7 @@ class MessageSchema(BaseModel):
 
 class ChatUpdateSchema(BaseModel):
     new_messages: list[MessageSchema]
+    is_ended: bool
 
 
 def __should_message_be_returned(dto: ChatMessage) -> bool:
@@ -43,10 +44,11 @@ async def chat(issue_id: int, message: AddUserMessageSchema) -> ChatUpdateSchema
     try:
         dto_messages = await Container.graph_controller.invoke_with_new_message(issue_id, message.text)
         new_messages = [MessageSchema.from_dto(message) for message in dto_messages if __should_message_be_returned(message)]
+        is_ended = await Container.graph_controller.is_ended(issue_id)
     except GraphError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Произошла непредвиденная ошибка")
 
-    return ChatUpdateSchema(new_messages=new_messages)
+    return ChatUpdateSchema(new_messages=new_messages, is_ended=is_ended)

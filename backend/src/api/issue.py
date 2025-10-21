@@ -1,12 +1,15 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from enum import Enum
-import traceback
 from typing import Self
+import logging
 
 from src.core.graph_controller import GraphError
 from src.core.container import Container
 from src.dto.messages import ChatMessage, MessageRole as DtoMessageRole
+
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/issue/{issue_id}")
 
@@ -46,9 +49,10 @@ async def chat(issue_id: int, message: AddUserMessageSchema) -> ChatUpdateSchema
         new_messages = [MessageSchema.from_dto(message) for message in dto_messages if __should_message_be_returned(message)]
         is_ended = await Container.graph_controller.is_ended(issue_id)
     except GraphError as e:
+        logger.exception("Graph error", exc_info=e)
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        traceback.print_exc()
+    except Exception as e:
+        logger.exception("Internal error", exc_info=e)
         raise HTTPException(status_code=500, detail="Произошла непредвиденная ошибка")
 
     return ChatUpdateSchema(new_messages=new_messages, is_ended=is_ended)

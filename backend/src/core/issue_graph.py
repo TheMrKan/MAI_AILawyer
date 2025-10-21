@@ -22,7 +22,7 @@ class State(TypedDict):
     # Annotated и add_messages обеспечивает добавление новых сообщений в конец списка, вместо перезаписи всего списка
     messages: Annotated[list[ChatMessage], _add_messages_to_state]
     acts: list[str]
-    is_user_agreed: bool
+    can_help: bool
 
 
 class IssueGraph(StateGraph[State, None, InputState]):
@@ -57,5 +57,5 @@ class IssueGraph(StateGraph[State, None, InputState]):
     @staticmethod
     async def __analyze_first_info(state: State):
         acts_analysis_result = await LLMUseCases(Container.LLM_instance).analyze_acts_async(state["messages"])
-        return {"messages": acts_analysis_result}
+        return {"can_help": acts_analysis_result.can_help, "messages": ChatMessage.from_ai(acts_analysis_result.resume_for_user)}
 

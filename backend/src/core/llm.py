@@ -34,6 +34,7 @@ class CerebrasLLM(AbstractLLM):
             messages = [self.__serialize_message(m) for m in messages],
             model = self.MODEL
         )
+        print(response.usage)
         return self.__deserialize_ai_message(response.choices[0].message)
 
     @classmethod

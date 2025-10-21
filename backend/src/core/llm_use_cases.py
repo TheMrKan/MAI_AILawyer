@@ -20,7 +20,7 @@ class LLMUseCases:
 
     ACTS_MESSAGE_TEMPLATE = "Вот такие правовые акты я нашел в своей базе: {acts}"
 
-    ACTS_ANALYSIS_PROMPT = """
+    ACTS_ANALYSIS_MESSAGE = ChatMessage.from_system("""
     Пиши так, будто акты нашел ты. Проанализируй их и дай очень краткое резюме ситуации.
     Сделай короткое заключение, можно ли помочь пользователю. Не давай инструкций, что ему делать.
     Оценивай строго, можно ли помочь пользователю в данной ситуации.
@@ -35,7 +35,15 @@ class LLMUseCases:
         "can_help": 0,
         "resume_for_user": "Ответ для пользователя"
     }
-    """
+    """)
+
+    CHECK_AGREEMENT_MESSAGE = ChatMessage.from_system("""
+    Оцени, является ли это согласием продолжить работу. Верни только одну цифру без дополнительных комментариев.
+    Пример положительный (если пользователь желает продолжить диалог):
+    1
+    Пример отрицательный:
+    0
+    """)
 
     llm: AbstractLLM
 
@@ -50,7 +58,7 @@ class LLMUseCases:
         return ChatMessage.from_ai(self.ACTS_MESSAGE_TEMPLATE.format(acts=joined_acts))
 
     async def analyze_acts_async(self, chat_history: list[ChatMessage]) -> ActsAnalysisResult:
-        prompt = [ChatMessage.from_system(self.ACTS_ANALYSIS_PROMPT), *chat_history]
+        prompt = [self.ACTS_ANALYSIS_MESSAGE, *chat_history]
         ai_response = await self.llm.invoke_async(messages=prompt)
 
         # даст исключение, если формат не соблюден
@@ -58,3 +66,7 @@ class LLMUseCases:
         validated = ActsAnalysisResult(**parsed)
 
         return validated
+
+    async def is_agreement_async(self, message: ChatMessage) -> bool:
+        ai_response = await self.llm.invoke_async(weak_model=True, messages=[self.CHECK_AGREEMENT_MESSAGE, message])
+        return "1" in ai_response.text

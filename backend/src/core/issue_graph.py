@@ -23,6 +23,7 @@ class State(TypedDict):
     messages: Annotated[list[ChatMessage], _add_messages_to_state]
     acts: list[str]
     can_help: bool
+    confirmation_0: bool
 
 
 class IssueGraph(StateGraph[State, None, InputState]):
@@ -36,12 +37,17 @@ class IssueGraph(StateGraph[State, None, InputState]):
         self.add_node("find_law_documents", self.__find_law_documents)
         self.add_node("analyze_first_info", self.__analyze_first_info)
         self.add_node("request_confirmation_0", self.__request_confirmation_0)
+        self.add_node("tmp_continue", self.__tmp_continue)
 
         self.add_edge(START, "save_first_info")
         self.add_edge("save_first_info", "find_law_documents")
         self.add_edge("find_law_documents", "analyze_first_info")
-        self.add_conditional_edges("analyze_first_info", self.__continue_if_can_help, {
+        self.add_conditional_edges("analyze_first_info", self.__continue_if_true("can_help"), {
             "continue": "request_confirmation_0",
+            "END": END
+        })
+        self.add_conditional_edges("request_confirmation_0", self.__continue_if_true("confirmation_0"), {
+            "continue": "tmp_continue",
             "END": END
         })
 
@@ -64,12 +70,22 @@ class IssueGraph(StateGraph[State, None, InputState]):
         return {"can_help": acts_analysis_result.can_help, "messages": ChatMessage.from_ai(acts_analysis_result.resume_for_user)}
 
     @staticmethod
-    async def __continue_if_can_help(state: State):
-        if not state["can_help"]:
-            return "END"
+    def __continue_if_true(key: str):
+        def wrapper(state: State):
+            if not state[key]:
+                return "END"
 
-        return "continue"
+            return "continue"
+        return wrapper
 
     @staticmethod
-    async def __request_confirmation_0(state: InputState):
+    async def __request_confirmation_0(state: State):
         user_input = interrupt(None)
+        user_message = ChatMessage.from_user(user_input)
+        is_confirmed = await LLMUseCases(Container.LLM_instance).is_agreement_async(user_message)
+        return {"confirmation_0": is_confirmed, "messages": ChatMessage.from_user(user_input)}
+
+    @staticmethod
+    async def __tmp_continue(state: State):
+        print("CONTINUE")
+

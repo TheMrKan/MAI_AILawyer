@@ -34,11 +34,15 @@ class ChatUpdateSchema(BaseModel):
     new_messages: list[MessageSchema]
 
 
+def __should_message_be_returned(dto: ChatMessage) -> bool:
+    return dto.role in (DtoMessageRole.USER, DtoMessageRole.AI)
+
+
 @router.post('/chat/')
 async def chat(issue_id: int, message: AddUserMessageSchema) -> ChatUpdateSchema:
     try:
         dto_messages = await Container.graph_controller.invoke_with_new_message(issue_id, message.text)
-        new_messages = [MessageSchema.from_dto(message) for message in dto_messages]
+        new_messages = [MessageSchema.from_dto(message) for message in dto_messages if __should_message_be_returned(message)]
     except GraphError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:

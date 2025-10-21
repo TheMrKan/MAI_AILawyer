@@ -46,4 +46,9 @@ class CerebrasLLM(AbstractLLM):
     @classmethod
     def __deserialize_ai_message(cls, message: ChatCompletionResponseChoiceMessage) -> ChatMessage:
         assert message.role == "assistant", f"Invalid AI role: {message.role}"
-        return ChatMessage.from_ai(message.content)
+        text = message.content
+        think_end = text.find("</think>")
+        if think_end != -1:
+            text = text[think_end+len("</think>"):]
+
+        return ChatMessage.from_ai(text)

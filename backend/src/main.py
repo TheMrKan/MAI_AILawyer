@@ -1,3 +1,7 @@
+import src.logs
+
+src.logs.setup()
+
 from fastapi import FastAPI
 
 from src.api.issue import router as issue_router

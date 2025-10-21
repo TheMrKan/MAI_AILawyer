@@ -22,7 +22,8 @@ class State(TypedDict):
     # Annotated и add_messages обеспечивает добавление новых сообщений в конец списка, вместо перезаписи всего списка
     messages: Annotated[list[ChatMessage], _add_messages_to_state]
     acts: list[str]
-    is_user_agreed: bool
+    can_help: bool
+    confirmation_0: bool
 
 
 class IssueGraph(StateGraph[State, None, InputState]):
@@ -32,66 +33,59 @@ class IssueGraph(StateGraph[State, None, InputState]):
         self.__build()
 
     def __build(self):
-        self.add_node("process_first_info", self.analyze_first_info)
-        self.add_node("find_acts", self.find_acts)
-        self.add_node("analyze", self.analyze_acts)
-        self.add_node("process_response", self.process_response)
-        self.add_node("cont", self.cont)
+        self.add_node("save_first_info", self.__save_first_info)
+        self.add_node("find_law_documents", self.__find_law_documents)
+        self.add_node("analyze_first_info", self.__analyze_first_info)
+        self.add_node("request_confirmation_0", self.__request_confirmation_0)
+        self.add_node("tmp_continue", self.__tmp_continue)
 
-        self.add_edge(START, "process_first_info")
-        self.add_edge("process_first_info", "find_acts")
-        self.add_edge("find_acts", "analyze")
-        self.add_edge("analyze", "process_response")
-        self.add_conditional_edges("process_response", self.is_input_ready, {
-            "retry": "process_response",
-            "cont": "cont",
-            "break": END
+        self.add_edge(START, "save_first_info")
+        self.add_edge("save_first_info", "find_law_documents")
+        self.add_edge("find_law_documents", "analyze_first_info")
+        self.add_conditional_edges("analyze_first_info", self.__continue_if_true("can_help"), {
+            "continue": "request_confirmation_0",
+            "END": END
         })
-        self.add_edge("cont", END)
+        self.add_conditional_edges("request_confirmation_0", self.__continue_if_true("confirmation_0"), {
+            "continue": "tmp_continue",
+            "END": END
+        })
 
     @staticmethod
-    async def analyze_first_info(state: InputState):
+    async def __save_first_info(state: InputState):
+        system_message = LLMUseCases(Container.LLM_instance).get_start_system_message()
         first_user_message = ChatMessage.from_user(state["first_description"])
 
-        analysis_result = await LLMUseCases(Container.LLM_instance).analyze_first_description_async(first_user_message)
-
-        return {"messages": [first_user_message, analysis_result]}
+        return {"messages": [system_message, first_user_message]}
 
     @staticmethod
-    def find_acts(state: State):
-        return {"acts": ["Закон 1234", "Закон 456"]}
+    async def __find_law_documents(state: State):
+        docs = await Container.laws_repo.find_fragments_async(state["messages"][0].text)
+        message = LLMUseCases(Container.LLM_instance).add_acts_to_dialogue(docs)
+        return {"messages": message, "acts": docs}
 
     @staticmethod
-    async def analyze_acts(state: State):
-        acts_analysis_result = await LLMUseCases(Container.LLM_instance).analyze_acts_async(state["messages"],
-                                                                                            state["acts"])
-        return {"messages": [ChatMessage.from_ai(f"Вот такие акты нашлись в моей базе: {state['acts']}"),
-                             acts_analysis_result]}
+    async def __analyze_first_info(state: State):
+        acts_analysis_result = await LLMUseCases(Container.LLM_instance).analyze_acts_async(state["messages"])
+        return {"can_help": acts_analysis_result.can_help, "messages": ChatMessage.from_ai(acts_analysis_result.resume_for_user)}
 
     @staticmethod
-    def process_response(state: State):
-        new_messages = []
-        response = interrupt(None)
-        new_messages.append(ChatMessage.from_user(response))
+    def __continue_if_true(key: str):
+        def wrapper(state: State):
+            if not state[key]:
+                return "END"
 
-        result = {"messages": new_messages}
-        if response == "YES":
-            result.update({"is_user_agreed": True})
-        elif response == "NO":
-            result.update({"is_user_agreed": False})
-
-        return result
+            return "continue"
+        return wrapper
 
     @staticmethod
-    def is_input_ready(state: State):
-        if "is_user_agreed" not in state:
-            return "retry"
-
-        if state["is_user_agreed"]:
-            return "cont"
-        else:
-            return "break"
+    async def __request_confirmation_0(state: State):
+        user_input = interrupt(None)
+        user_message = ChatMessage.from_user(user_input)
+        is_confirmed = await LLMUseCases(Container.LLM_instance).is_agreement_async(user_message)
+        return {"confirmation_0": is_confirmed, "messages": ChatMessage.from_user(user_input)}
 
     @staticmethod
-    def cont(state: State):
-        return {"messages": [ChatMessage.from_ai("Продолжаем работу...")]}
+    async def __tmp_continue(state: State):
+        print("CONTINUE")
+

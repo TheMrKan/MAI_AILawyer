@@ -5,6 +5,7 @@ from langgraph.types import interrupt
 
 from src.core.container import Container
 from src.core.llm_use_cases import LLMUseCases
+from src.dto.laws import LawFragment
 from src.dto.messages import ChatMessage
 
 
@@ -25,7 +26,7 @@ def _add_messages_to_state(left: list[ChatMessage], right: list[ChatMessage] | C
 class State(TypedDict):
     # Annotated и add_messages обеспечивает добавление новых сообщений в конец списка, вместо перезаписи всего списка
     messages: Annotated[list[ChatMessage], _add_messages_to_state]
-    acts: list[str]
+    law_docs: list[LawFragment]
     can_help: bool
     confirmation_0: bool
 
@@ -66,16 +67,15 @@ class IssueGraph(StateGraph[State, None, InputState]):
     @staticmethod
     async def __find_law_documents(state: State):
         docs = await Container.laws_repo.find_fragments_async(state["messages"][0].text)
-        message = LLMUseCases(Container.LLM_instance).add_acts_to_dialogue(docs)
 
-        logger.info(f"Saving message with documents: \n{message.text}")
-        return {"messages": message, "acts": docs}
+        logger.info(f"Adding documents: \n{docs}")
+        return {"law_docs": docs}
 
     @staticmethod
     async def __analyze_first_info(state: State):
-        acts_analysis_result = await LLMUseCases(Container.LLM_instance).analyze_acts_async(state["messages"])
+        acts_analysis_result = await LLMUseCases(Container.LLM_instance).analyze_acts_async(state["messages"], state["law_docs"])
         logger.info(f"Acts analysis result: {acts_analysis_result}")
-        return {"can_help": acts_analysis_result.can_help, "messages": ChatMessage.from_ai(acts_analysis_result.resume_for_user)}
+        return {"can_help": acts_analysis_result.can_help, "messages": acts_analysis_result.messages}
 
     @staticmethod
     def __continue_if_true(key: str):

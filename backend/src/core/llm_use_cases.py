@@ -1,12 +1,19 @@
 import json
 from pydantic import BaseModel
+from dataclasses import dataclass
 
 from src.core.llm import AbstractLLM
 from src.dto.messages import ChatMessage
 from src.dto.laws import LawFragment
 
 
-class ActsAnalysisResult(BaseModel):
+@dataclass
+class ActsAnalysisResult:
+    can_help: bool
+    messages: list[ChatMessage]
+
+
+class _ActsAnalysisLLMResponseSchema(BaseModel):
     can_help: bool
     resume_for_user: str
 
@@ -53,19 +60,19 @@ class LLMUseCases:
     def get_start_system_message(self):
         return self.FIRST_SYSTEM_MESSAGE
 
-    def add_acts_to_dialogue(self, acts: list[LawFragment]):
-        joined_acts = "\n\n".join([a.content for a in acts])
-        return ChatMessage.from_ai(self.ACTS_MESSAGE_TEMPLATE.format(acts=joined_acts))
+    async def analyze_acts_async(self, chat_history: list[ChatMessage], law_docs: list[LawFragment]) -> ActsAnalysisResult:
+        joined_acts = "\n\n".join([a.content for a in law_docs])
+        documents_message = ChatMessage.from_ai(self.ACTS_MESSAGE_TEMPLATE.format(acts=joined_acts))
 
-    async def analyze_acts_async(self, chat_history: list[ChatMessage]) -> ActsAnalysisResult:
-        prompt = [self.ACTS_ANALYSIS_MESSAGE, *chat_history]
+        prompt = [documents_message, self.ACTS_ANALYSIS_MESSAGE, *chat_history]
         ai_response = await self.llm.invoke_async(messages=prompt)
 
         # даст исключение, если формат не соблюден
         parsed = json.loads(ai_response.text)
-        validated = ActsAnalysisResult(**parsed)
+        validated = _ActsAnalysisLLMResponseSchema(**parsed)
+        new_messages = [documents_message, ChatMessage.from_ai(validated.resume_for_user)]
 
-        return validated
+        return ActsAnalysisResult(can_help=validated.can_help, messages=new_messages)
 
     async def is_agreement_async(self, message: ChatMessage) -> bool:
         ai_response = await self.llm.invoke_async(weak_model=True, messages=[self.CHECK_AGREEMENT_MESSAGE, message])

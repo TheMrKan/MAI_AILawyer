@@ -4,7 +4,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
 
 from src.core.container import Container
-from src.core.llm_use_cases import LLMUseCases
+from src.core import llm_use_cases
 from src.dto.laws import LawFragment
 from src.dto.messages import ChatMessage
 
@@ -58,7 +58,7 @@ class IssueGraph(StateGraph[State, None, InputState]):
 
     @staticmethod
     async def __save_first_info(state: InputState):
-        system_message = LLMUseCases(Container.LLM_instance).get_start_system_message()
+        system_message = llm_use_cases.get_start_system_message()
         first_user_message = ChatMessage.from_user(state["first_description"])
 
         logger.info(f"Saving first message: {state["first_description"]}")
@@ -73,7 +73,7 @@ class IssueGraph(StateGraph[State, None, InputState]):
 
     @staticmethod
     async def __analyze_first_info(state: State):
-        acts_analysis_result = await LLMUseCases(Container.LLM_instance).analyze_acts_async(state["messages"], state["law_docs"])
+        acts_analysis_result = await llm_use_cases.analyze_acts_async(Container.LLM_instance, state["messages"], state["law_docs"])
         logger.info(f"Acts analysis result: {acts_analysis_result}")
         return {"can_help": acts_analysis_result.can_help, "messages": acts_analysis_result.messages}
 
@@ -91,7 +91,7 @@ class IssueGraph(StateGraph[State, None, InputState]):
     async def __request_confirmation_0(state: State):
         user_input = interrupt(None)
         user_message = ChatMessage.from_user(user_input)
-        is_confirmed = await LLMUseCases(Container.LLM_instance).is_agreement_async(user_message)
+        is_confirmed = await llm_use_cases.is_agreement_async(Container.LLM_instance, user_message)
         logger.info(f"Got user confirmation input ({is_confirmed}): {user_input}")
         return {"confirmation_0": is_confirmed, "messages": ChatMessage.from_user(user_input)}
 

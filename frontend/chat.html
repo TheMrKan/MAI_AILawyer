@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Описание issue</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <style>
+    html,body{height:100%}
+    .chat-wrap{height:80vh; display:flex; flex-direction:column; border:1px solid #e6e6e6; border-radius:6px; overflow:hidden}
+    .messages{flex:1; overflow-y:auto; padding:1rem; background: #fafafa}
+    .message-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.75rem;
+}
+
+/* Сообщения собеседника — слева */
+.message-row.other {
+  align-items: flex-start;
+}
+
+/* Твои сообщения — справа */
+.message-row.me {
+  align-items: flex-end;
+}
+
+.msg {
+  max-width: 75%;
+  word-wrap: break-word;
+}
+
+/* Цвет и форма твоих сообщений */
+.msg.me {
+  background: #00d1b2;
+  color: white;
+  border-radius: 12px 12px 0 12px;
+  padding: 0.5rem 0.75rem;
+}
+
+/* Сообщения собеседника */
+.msg.other {
+  background: #f5f5f5;
+  color: #222;
+  border-radius: 12px 12px 12px 0;
+  padding: 0.5rem 0.75rem;
+}
+    .meta{font-size:0.75rem; opacity:0.7; margin-top:0.25rem}
+    .controls{padding:0.75rem; background:white; border-top:1px solid #eee}
+    .textarea.is-small{height:3rem}
+    .is-scroll-bottom{scroll-behavior:smooth}
+    .chat-ended {
+  text-align: center;
+  padding: 1rem;
+  background: #f5f5f5;
+  color: #888;
+  font-weight: 500;
+}
+  </style>
+</head>
+<body>
+<section class="section">
+  <div class="container">
+    <h1 class="title">Описание issue</h1>
+
+    <div class="chat-wrap">
+      <div id="messages" class="messages is-scroll-bottom" aria-live="polite" aria-label="Область сообщений">
+        <!-- сообщения будут вставляться сюда -->
+      </div>
+
+      <div class="controls" id="controls">
+  <div class="columns is-mobile is-vcentered">
+    <div class="column">
+      <textarea id="input" class="textarea is-small" placeholder="Напишите сообщение..."></textarea>
+    </div>
+    <div class="column is-narrow">
+      <button id="sendBtn" class="button is-primary">Отправить</button>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function(){
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('input');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function formatTime(date){
+      const h = String(date.getHours()).padStart(2,'0');
+      const m = String(date.getMinutes()).padStart(2,'0');
+      return `${h}:${m}`;
+    }
+
+    function endChat() {
+  const controls = document.getElementById('controls');
+  controls.innerHTML = '<div class="chat-ended">Чат завершён</div>';
+}
+
+    function addMessage(text, who='other'){
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message-row ' + (who === 'me' ? 'me' : 'other');
+
+      const msg = document.createElement('div');
+      msg.className = 'msg ' + (who==='me' ? 'me' : 'other');
+      msg.textContent = text;
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = (who==='me' ? 'Вы' : 'AI') + ' • ' + formatTime(new Date());
+
+      wrapper.appendChild(msg);
+      wrapper.appendChild(meta);
+      messagesEl.appendChild(wrapper);
+      scrollToBottom();
+    }
+
+    function scrollToBottom(){
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function getIssueId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('issue_id');
+    }
+
+    async function send(){
+        const text = inputEl.value.replace(/\n+$/,'');
+        if(!text.trim()) return;
+        inputEl.value = '';
+        inputEl.focus();
+
+        const response = await fetch(`http://localhost:8000/issue/${getIssueId()}/chat/`, {
+            method: "POST",
+            headers: {
+                 'Accept': 'application/json',
+                 'Content-Type': 'application/json'
+              },
+            body: JSON.stringify({ "text": text })
+        })
+        const data = await response.json();
+        console.log(data);
+
+        if (data["is_ended"] == true) {
+            endChat();
+        }
+
+        const newMessages = data["new_messages"];
+        for (let message of newMessages) {
+            addMessage(message["text"], message["role"] === "user" ? "me" : "other");
+        }
+
+    }
+
+    // События
+    sendBtn.addEventListener('click', send);
+
+    inputEl.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        send();
+      }
+    });
+
+  })();
+</script>
+</body>
+</html>

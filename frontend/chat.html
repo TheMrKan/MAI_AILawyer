@@ -6,165 +6,240 @@
   <title>Описание issue</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
   <style>
-    html,body{height:100%}
-    .chat-wrap{height:80vh; display:flex; flex-direction:column; border:1px solid #e6e6e6; border-radius:6px; overflow:hidden}
-    .messages{flex:1; overflow-y:auto; padding:1rem; background: #fafafa}
-    .message-row {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 0.75rem;
-}
+    html,body{
+      height:100%;
+      background:#f8f8f8;
+      color:#222;
+      font-family:'Inter',system-ui,sans-serif;
+    }
 
-/* Сообщения собеседника — слева */
-.message-row.other {
-  align-items: flex-start;
-}
+    .chat-wrap{
+      height:80vh;
+      display:flex;
+      flex-direction:column;
+      border:1px solid #ddd;
+      border-radius:14px;
+      overflow:hidden;
+      background:white;
+      box-shadow:0 2px 8px rgba(0,0,0,0.05);
+    }
 
-/* Твои сообщения — справа */
-.message-row.me {
-  align-items: flex-end;
-}
+    .messages{
+      flex:1;
+      overflow-y:auto;
+      padding:1rem 1.25rem;
+      background:#fafafa;
+    }
 
-.msg {
-  max-width: 75%;
-  word-wrap: break-word;
-}
+    .message-row{
+      display:flex;
+      flex-direction:column;
+      margin-bottom:0.9rem;
+    }
 
-/* Цвет и форма твоих сообщений */
-.msg.me {
-  background: #00d1b2;
-  color: white;
-  border-radius: 12px 12px 0 12px;
-  padding: 0.5rem 0.75rem;
-}
+    .message-row.other{ align-items:flex-start; }
+    .message-row.me{ align-items:flex-end; }
 
-/* Сообщения собеседника */
-.msg.other {
-  background: #f5f5f5;
-  color: #222;
-  border-radius: 12px 12px 12px 0;
-  padding: 0.5rem 0.75rem;
-}
-    .meta{font-size:0.75rem; opacity:0.7; margin-top:0.25rem}
-    .controls{padding:0.75rem; background:white; border-top:1px solid #eee}
-    .textarea.is-small{height:3rem}
-    .is-scroll-bottom{scroll-behavior:smooth}
-    .chat-ended {
-  text-align: center;
-  padding: 1rem;
-  background: #f5f5f5;
-  color: #888;
-  font-weight: 500;
-}
+    .msg{
+      max-width:75%;
+      word-wrap:break-word;
+      padding:0.65rem 0.9rem;
+      border-radius:12px;
+      line-height:1.4;
+      font-size:0.95rem;
+      transition:background 0.2s ease;
+    }
+
+    .msg.me{
+      background:#222;
+      color:#fff;
+      border-radius:14px 14px 0 14px;
+    }
+
+    .msg.other{
+      background:#eee;
+      color:#111;
+      border-radius:14px 14px 14px 0;
+    }
+
+    .meta{
+      font-size:0.75rem;
+      opacity:0.6;
+      margin-top:0.25rem;
+    }
+
+    .controls{
+      padding:0.8rem 1rem;
+      background:white;
+      border-top:1px solid #eee;
+    }
+
+    .textarea.is-small{
+      height:3rem;
+      resize:none;
+      border-radius:10px;
+      border:1px solid #ddd;
+      transition:border-color 0.2s ease;
+    }
+    .textarea.is-small:focus{
+      border-color:#000;
+      box-shadow:none;
+    }
+
+    .button.is-primary{
+      background:#000;
+      border:none;
+      border-radius:10px;
+      color:white;
+      transition:opacity 0.2s ease;
+    }
+    .button.is-primary:hover{
+      opacity:0.85;
+    }
+
+    .chat-ended{
+      text-align:center;
+      padding:1rem;
+      background:#f5f5f5;
+      color:#666;
+      font-weight:500;
+      border-radius:0 0 14px 14px;
+    }
+
+    .title{
+      color:#111;
+      font-weight:600;
+      font-size:1.5rem;
+      margin-bottom:1.2rem;
+    }
   </style>
 </head>
 <body>
 <section class="section">
   <div class="container">
-    <h1 class="title">Описание issue</h1>
+    <h1 class="title">Заголовок проблемы</h1>
 
     <div class="chat-wrap">
-      <div id="messages" class="messages is-scroll-bottom" aria-live="polite" aria-label="Область сообщений">
-        <!-- сообщения будут вставляться сюда -->
-      </div>
+      <div id="messages" class="messages" aria-live="polite" aria-label="Область сообщений"></div>
 
       <div class="controls" id="controls">
-  <div class="columns is-mobile is-vcentered">
-    <div class="column">
-      <textarea id="input" class="textarea is-small" placeholder="Напишите сообщение..."></textarea>
-    </div>
-    <div class="column is-narrow">
-      <button id="sendBtn" class="button is-primary">Отправить</button>
-    </div>
-  </div>
-</div>
+        <div class="columns is-mobile is-vcentered">
+          <div class="column">
+            <textarea id="input" class="textarea is-small" placeholder="Напишите сообщение..."></textarea>
+          </div>
+          <div class="column is-narrow">
+            <button id="sendBtn" class="button is-primary">Отправить</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
 <script>
-  (function(){
-    const messagesEl = document.getElementById('messages');
-    const inputEl = document.getElementById('input');
-    const sendBtn = document.getElementById('sendBtn');
+(function(){
+  const messagesEl = document.getElementById('messages');
 
-    function formatTime(date){
-      const h = String(date.getHours()).padStart(2,'0');
-      const m = String(date.getMinutes()).padStart(2,'0');
-      return `${h}:${m}`;
-    }
+  function formatTime(date){
+    const h = String(date.getHours()).padStart(2,'0');
+    const m = String(date.getMinutes()).padStart(2,'0');
+    return `${h}:${m}`;
+  }
 
-    function endChat() {
-  const controls = document.getElementById('controls');
-  controls.innerHTML = '<div class="chat-ended">Чат завершён</div>';
-}
+  function endChat(){
+    const controls = document.getElementById('controls');
+    controls.innerHTML = '<div class="chat-ended">Чат завершён</div>';
+  }
 
-    function addMessage(text, who='other'){
-      const wrapper = document.createElement('div');
-      wrapper.className = 'message-row ' + (who === 'me' ? 'me' : 'other');
-
-      const msg = document.createElement('div');
-      msg.className = 'msg ' + (who==='me' ? 'me' : 'other');
-      msg.textContent = text;
-
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      meta.textContent = (who==='me' ? 'Вы' : 'AI') + ' • ' + formatTime(new Date());
-
-      wrapper.appendChild(msg);
-      wrapper.appendChild(meta);
-      messagesEl.appendChild(wrapper);
-      scrollToBottom();
-    }
-
-    function scrollToBottom(){
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
-
-    function getIssueId() {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('issue_id');
-    }
-
-    async function send(){
-        const text = inputEl.value.replace(/\n+$/,'');
-        if(!text.trim()) return;
-        inputEl.value = '';
-        inputEl.focus();
-
-        const response = await fetch(`http://localhost:8000/issue/${getIssueId()}/chat/`, {
-            method: "POST",
-            headers: {
-                 'Accept': 'application/json',
-                 'Content-Type': 'application/json'
-              },
-            body: JSON.stringify({ "text": text })
-        })
-        const data = await response.json();
-        console.log(data);
-
-        if (data["is_ended"] == true) {
-            endChat();
-        }
-
-        const newMessages = data["new_messages"];
-        for (let message of newMessages) {
-            addMessage(message["text"], message["role"] === "user" ? "me" : "other");
-        }
-
-    }
-
-    // События
-    sendBtn.addEventListener('click', send);
-
-    inputEl.addEventListener('keydown', (e)=>{
-      if(e.key === 'Enter' && !e.shiftKey){
-        e.preventDefault();
-        send();
+  function setLoadingStatus(enabled){
+      if (enabled) {
+          const controls = document.getElementById('controls');
+    controls.innerHTML = '<div class="loading">Обработка...</div>';
       }
-    });
+      else {
+          const controls = document.getElementById('controls');
+    controls.innerHTML = '<div class="columns is-mobile is-vcentered">\n' +
+        '          <div class="column">\n' +
+        '            <textarea id="input" class="textarea is-small" placeholder="Напишите сообщение..."></textarea>\n' +
+        '          </div>\n' +
+        '          <div class="column is-narrow">\n' +
+        '            <button id="sendBtn" class="button is-primary">Отправить</button>\n' +
+        '          </div>\n' +
+        '        </div>';
+    console.log(document.getElementById('sendBtn'));
+        document.getElementById('sendBtn').addEventListener('click', send);
+      }
 
-  })();
+  }
+
+  function addMessage(text, who='other'){
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message-row ' + (who === 'me' ? 'me' : 'other');
+
+    const msg = document.createElement('div');
+    msg.className = 'msg ' + (who==='me' ? 'me' : 'other');
+    msg.textContent = text;
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = (who==='me' ? 'Вы' : 'AI') + ' • ' + formatTime(new Date());
+
+    wrapper.appendChild(msg);
+    wrapper.appendChild(meta);
+    messagesEl.appendChild(wrapper);
+    scrollToBottom();
+  }
+
+  function scrollToBottom(){
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function getIssueId(){
+    const params = new URLSearchParams(window.location.search);
+    return params.get('issue_id');
+  }
+
+  async function send(){
+      console.log("send");
+      let inputEl = document.getElementById('input');
+    const text = inputEl.value.replace(/\n+$/,'');
+    if(!text.trim()) return;
+    inputEl.value = '';
+    inputEl.focus();
+
+    setLoadingStatus(true);
+    let response = null;
+    try{
+        response = await fetch(`http://localhost:8000/issue/${getIssueId()}/chat/`, {
+      method: "POST",
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ "text": text })
+    });
+    }
+    finally {
+        setLoadingStatus(false);
+    }
+
+
+    const data = await response.json();
+    console.log(data);
+
+    if (data["is_ended"] === true) {
+      endChat();
+    }
+
+    const newMessages = data["new_messages"];
+    for (let message of newMessages) {
+      addMessage(message["text"], message["role"] === "user" ? "me" : "other");
+    }
+  }
+
+  document.getElementById('sendBtn').addEventListener('click', send);
+
+})();
 </script>
 </body>
 </html>

@@ -3,14 +3,14 @@ from abc import ABC, abstractmethod
 from src.dto.laws import LawFragment
 
 
-class AbstractLawDocsRepository(ABC):
+class LawDocsRepositoryABC(ABC):
 
     @abstractmethod
     async def find_fragments_async(self, query: str) -> list[LawFragment]:
         pass
 
 
-class TempLawDocsRepository(AbstractLawDocsRepository):
+class TempLawDocsRepository(LawDocsRepositoryABC):
 
     __FRAGMENTS = [
         LawFragment(1,

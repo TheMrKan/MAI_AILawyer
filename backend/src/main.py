@@ -1,15 +1,16 @@
-import src.logs
+from src.application import logging
 
-src.logs.setup()
+logging.setup()
 
 from fastapi import FastAPI
 
 from src.api.issue import router as issue_router
-from src.core.container import Container
+from src.application import provider
+
+provider_instance = provider.build()
+provider.global_provider = provider_instance
 
 app = FastAPI()
-
-
-Container.build()
+app.dependency_overrides[provider.Provider] =  lambda: provider_instance
 
 app.include_router(issue_router)

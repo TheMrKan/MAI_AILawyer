@@ -4,6 +4,7 @@ from langgraph.types import Command, StateSnapshot
 
 from src.core.issue_graph import IssueGraph, InputState
 from src.dto.messages import ChatMessage
+from src.application.provider import Provider
 
 
 class GraphError(Exception):
@@ -15,7 +16,7 @@ class GraphController:
     checkpointer: BaseCheckpointSaver
     graph: CompiledStateGraph
 
-    def __init__(self, checkpointer: BaseCheckpointSaver):
+    def __init__(self,  checkpointer: BaseCheckpointSaver):
         self.checkpointer = checkpointer
 
         self.graph = self.__compile_graph(checkpointer)

@@ -7,7 +7,7 @@ from cerebras.cloud.sdk.types.chat.chat_completion import ChatCompletionResponse
 from src.dto.messages import ChatMessage, MessageRole
 
 
-class AbstractLLM(ABC):
+class LLMABC(ABC):
 
     @abstractmethod
     async def invoke_async(self, messages: Iterable[ChatMessage], weak_model: bool = False) -> ChatMessage:
@@ -15,7 +15,7 @@ class AbstractLLM(ABC):
 
 
 
-class CerebrasLLM(AbstractLLM):
+class CerebrasLLM(LLMABC):
 
     ROLES_MAP = {
         MessageRole.SYSTEM: "system",

@@ -2,7 +2,7 @@ import json
 from pydantic import BaseModel
 from dataclasses import dataclass
 
-from src.core.llm import AbstractLLM
+from src.core.llm import LLMABC
 from src.dto.messages import ChatMessage
 from src.dto.laws import LawFragment
 
@@ -50,7 +50,7 @@ __ACTS_ANALYSIS_MESSAGE = ChatMessage.from_system("""
 
 
 
-async def analyze_acts_async(llm: AbstractLLM,
+async def analyze_acts_async(llm: LLMABC,
                              chat_history: list[ChatMessage],
                              law_docs: list[LawFragment]) -> ActsAnalysisResult:
     joined_acts = "\n\n".join([a.content for a in law_docs])

@@ -2,8 +2,9 @@ from langgraph.checkpoint.memory import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command, StateSnapshot
 
-from src.core.issue_graph import IssueGraph, InputState
+from src.core.issue_graph import IssueGraph, InputState, RuntimeContext
 from src.dto.messages import ChatMessage
+from src.application.provider import Provider
 
 
 class GraphError(Exception):
@@ -15,7 +16,7 @@ class GraphController:
     checkpointer: BaseCheckpointSaver
     graph: CompiledStateGraph
 
-    def __init__(self, checkpointer: BaseCheckpointSaver):
+    def __init__(self,  checkpointer: BaseCheckpointSaver):
         self.checkpointer = checkpointer
 
         self.graph = self.__compile_graph(checkpointer)
@@ -26,7 +27,7 @@ class GraphController:
         compiled = graph.compile(checkpointer=checkpointer)
         return compiled
 
-    async def invoke_with_new_message(self, thread_id: int, message_text: str) -> list[ChatMessage]:
+    async def invoke_with_new_message(self, provider: Provider, thread_id: int, message_text: str) -> list[ChatMessage]:
         graph_config = {"configurable": {"thread_id": thread_id}}
         graph_state = await self.graph.aget_state(graph_config)
 
@@ -41,7 +42,9 @@ class GraphController:
             history = graph_state.values.get("messages", [])
             skip_messages = len(history)
 
-        result = await self.graph.ainvoke(graph_input, graph_config)
+        context = RuntimeContext()
+        context.provider = provider
+        result = await self.graph.ainvoke(graph_input, graph_config, context=context)
         return result["messages"][skip_messages:]
 
     async def is_ended(self, thread_id: int) -> bool:

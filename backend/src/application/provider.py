@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar
+from functools import wraps
+import inspect
 
 
 class FactoryABC[T](ABC):
@@ -19,6 +20,9 @@ class Singleton[T](FactoryABC[T]):
         return self.__instance
 
 
+global_provider: "Provider"
+
+
 class Provider:
     mapping: dict[type, FactoryABC]
 
@@ -28,11 +32,30 @@ class Provider:
     def __getitem__[IFACE](self, item: type[IFACE]) -> IFACE:
         return self.resolve(item)
 
+    def __contains__(self, item: type) -> bool:
+        return item in self.mapping.keys()
+
     def resolve(self, interface: type):
         return self.mapping[interface]()
 
     def register_singleton[IFACE](self, interface: type[IFACE], instance: IFACE):
         self.mapping[interface] = Singleton(instance)
+
+
+
+def inject_global(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        sig = inspect.signature(func)
+        for pname, pvalue in sig.parameters.items():
+            if pvalue.annotation not in global_provider:
+                continue
+
+            kwargs[pname] = global_provider[pvalue.annotation]
+        return await func(*args, **kwargs)
+
+    return wrapper
+
 
 
 def build() -> Provider:

@@ -11,3 +11,13 @@ services:
     volumes:
       - "./backend/src:/app/src"
     restart: no
+
+  chroma:
+    image: chromadb/chroma
+    volumes:
+      - chroma-data:/data
+    ports:
+      - "8004:8000"
+
+volumes:
+  chroma-data:

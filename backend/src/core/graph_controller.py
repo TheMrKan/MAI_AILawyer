@@ -4,7 +4,6 @@ from langgraph.types import Command, StateSnapshot
 
 from src.core.issue_graph import IssueGraph, InputState
 from src.dto.messages import ChatMessage
-from src.application.provider import Provider
 
 
 class GraphError(Exception):

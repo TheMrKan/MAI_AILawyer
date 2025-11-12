@@ -17,6 +17,8 @@ services:
     image: chromadb/chroma
     volumes:
       - chroma-data:/data
+    expose:
+      - "8000"
     ports:
       - "8004:8000"
 

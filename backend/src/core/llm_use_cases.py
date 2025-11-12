@@ -67,7 +67,7 @@ async def analyze_acts_async(llm: LLMABC,
     return ActsAnalysisResult(can_help=validated.can_help, messages=new_messages)
 
 
-CHECK_AGREEMENT_MESSAGE = ChatMessage.from_system("""
+__CHECK_AGREEMENT_MESSAGE = ChatMessage.from_system("""
 Оцени, является ли это согласием продолжить работу. Верни только одну цифру без дополнительных комментариев.
 Пример положительный (если пользователь желает продолжить диалог):
 1
@@ -75,6 +75,6 @@ CHECK_AGREEMENT_MESSAGE = ChatMessage.from_system("""
 0
 """)
 
-async def is_agreement_async(self, message: ChatMessage) -> bool:
-    ai_response = await self.llm.invoke_async(weak_model=True, messages=[self.CHECK_AGREEMENT_MESSAGE, message])
+async def is_agreement_async(llm: LLMABC, message: ChatMessage) -> bool:
+    ai_response = await llm.invoke_async(weak_model=True, messages=[__CHECK_AGREEMENT_MESSAGE, message])
     return "1" in ai_response.text

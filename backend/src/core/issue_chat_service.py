@@ -10,7 +10,7 @@ class GraphError(Exception):
     pass
 
 
-class GraphController:
+class IssueChatService:
 
     checkpointer: BaseCheckpointSaver
     graph: CompiledStateGraph
@@ -26,8 +26,8 @@ class GraphController:
         compiled = graph.compile(checkpointer=checkpointer)
         return compiled
 
-    async def invoke_with_new_message(self, thread_id: int, message_text: str) -> list[ChatMessage]:
-        graph_config = {"configurable": {"thread_id": thread_id}}
+    async def process_new_user_message(self, issue_id: int, message_text: str) -> list[ChatMessage]:
+        graph_config = {"configurable": {"thread_id": issue_id}}
         graph_state = await self.graph.aget_state(graph_config)
 
         skip_messages = 0
@@ -44,8 +44,8 @@ class GraphController:
         result = await self.graph.ainvoke(graph_input, graph_config)
         return result["messages"][skip_messages:]
 
-    async def is_ended(self, thread_id: int) -> bool:
-        graph_config = {"configurable": {"thread_id": thread_id}}
+    async def is_ended(self, issue_id: int) -> bool:
+        graph_config = {"configurable": {"thread_id": issue_id}}
         graph_state = await self.graph.aget_state(graph_config)
         return self.__is_ended(graph_state)
 

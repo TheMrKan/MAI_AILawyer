@@ -2,7 +2,7 @@ from langgraph.checkpoint.memory import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command, StateSnapshot
 
-from src.core.issue_graph import IssueGraph, InputState
+from src.core.chat_graph.full_chat_graph import FullChatGraph, InputState
 from src.dto.messages import ChatMessage
 
 
@@ -22,7 +22,7 @@ class GraphController:
 
     @staticmethod
     def __compile_graph(checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
-        graph = IssueGraph()
+        graph = FullChatGraph()
         compiled = graph.compile(checkpointer=checkpointer)
         return compiled
 

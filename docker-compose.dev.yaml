@@ -10,4 +10,17 @@ services:
       - "8000:8000"
     volumes:
       - "./backend/src:/app/src"
+      - "./backend/models/onnx_models:/root/.cache/chroma/onnx_models"
     restart: no
+
+  chroma:
+    image: chromadb/chroma
+    volumes:
+      - chroma-data:/data
+    expose:
+      - "8000"
+    ports:
+      - "8004:8000"
+
+volumes:
+  chroma-data:

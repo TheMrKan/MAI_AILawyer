@@ -34,34 +34,45 @@ class State(TypedDict, total=False):
     confirmation_0: bool
     templates: list[str]
     relevant_template: str | None
+    confirmation_1: bool
 
 
 class IssueGraph(StateGraph[State, None, InputState]):
 
     def __init__(self):
         super().__init__(State, input_schema=InputState)    # type: ignore
-        self.__build()
+        self.__build_parent()
 
-    def __build(self):
+    def __build_parent(self):
         self.add_node("save_first_info", self.__save_first_info)
         self.add_node("find_law_documents", self.__find_law_documents)
         self.add_node("analyze_first_info", self.__analyze_first_info)
-        self.add_node("request_confirmation_0", self.__request_confirmation_0)
+        self.add_node("confirm0", self.__process_confirmation("confirmation_0"))
         self.add_node("find_templates", self.__find_templates)
         self.add_node("analyze_templates", self.__analyze_templates)
+        self.add_node("confirm1", self.__process_confirmation("confirmation_1"))
 
         self.add_edge(START, "save_first_info")
         self.add_edge("save_first_info", "find_law_documents")
         self.add_edge("find_law_documents", "analyze_first_info")
         self.add_conditional_edges("analyze_first_info", self.__continue_if_true("can_help"), {
-            "continue": "request_confirmation_0",
+            "continue": "confirm0",
             "END": END
         })
-        self.add_conditional_edges("request_confirmation_0", self.__continue_if_true("confirmation_0"), {
+        self.add_conditional_edges("confirm0", self.__continue_if_true("confirmation_0"), {
             "continue": "find_templates",
             "END": END
         })
         self.add_edge("find_templates", "analyze_templates")
+        self.add_conditional_edges("analyze_templates", self.__continue_if_true("relevant_template"), {
+            "continue": "confirm1",
+            "END": END
+        })
+        self.add_conditional_edges("confirm1", self.__path_selector, {
+            "free": END,
+            "strict": END,
+        })
+
 
 
 
@@ -99,19 +110,22 @@ class IssueGraph(StateGraph[State, None, InputState]):
         return wrapper
 
     @staticmethod
-    @inject_global
-    async def __request_confirmation_0(state: State, llm: LLMABC) -> State:
-        user_input = interrupt(None)
-        user_message = ChatMessage.from_user(user_input)
-        is_confirmed = await llm_use_cases.is_agreement_async(llm, user_message)
-        logger.info(f"Got user confirmation input ({is_confirmed}): {user_input}")
-        return {"confirmation_0": is_confirmed, "messages": [ChatMessage.from_user(user_input)]}
+    def __process_confirmation(write_to: str):
+        @inject_global
+        async def _internal(state: State, llm: LLMABC) -> State:
+            user_input = interrupt(None)
+            user_message = ChatMessage.from_user(user_input)
+            is_confirmed = await llm_use_cases.is_agreement_async(llm, user_message)
+            logger.info(f"Got user confirmation input (for {write_to}) ({is_confirmed}): {user_input}")
+            return {write_to: is_confirmed, "messages": [ChatMessage.from_user(user_input)]}
+        return _internal
+
 
     @staticmethod
     async def __find_templates(state: State) -> State:
         logger.info("Searching for templates...")
         await asyncio.sleep(1)
-        templates = ["Шаблон 1", "Шаблон 2", "Шаблон 3", "Шаблон 4", "Шаблон 5"]
+        templates = ["Шаблон 1 (strict)", "Шаблон 2 (free)", "Шаблон 3 (free)", "Шаблон 4 (strict)", "Шаблон 5 (free)"]
         logger.info(f"Found templates: {templates}")
         return {"templates": templates}
 
@@ -127,6 +141,15 @@ class IssueGraph(StateGraph[State, None, InputState]):
         ]
         logger.info("Selected relevant template: %s", relevant)
         return {"relevant_template": relevant, "messages": new_messages}
+
+    @staticmethod
+    def __path_selector(state: State) -> str:
+        if not state["confirmation_1"]:
+            return "END"
+
+        if "free" in state["relevant_template"]:
+            return "free"
+        return "strict"
 
 
 

@@ -38,7 +38,7 @@ class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]
     async def __analyze_templates(self, state: BaseState) -> BaseState:
         self.__logger.info("Analyzing templates...")
         await asyncio.sleep(1)
-        relevant = state["templates"][1]
+        relevant = state["templates"][0]
         new_messages = [
             ChatMessage.from_ai(f"Нашел подходящий шаблон обращения: {relevant}.\n\n"
                                 f"Этот документ бла-бла-бла...\n"

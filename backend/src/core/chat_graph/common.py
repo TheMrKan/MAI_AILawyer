@@ -34,6 +34,12 @@ class BaseState(InputState, total=False):
 class FreeTemplateState(BaseState, total=False):
     loop_completed: bool
 
+
+class StrictTemplateState(BaseState, total=False):
+    loop_completed: bool
+    fields: dict[str, str]
+
+
 def create_process_confirmation_node(write_to: str, logger: logging.Logger):
     @inject_global
     async def _internal(state: BaseState, llm: LLMABC) -> BaseState:

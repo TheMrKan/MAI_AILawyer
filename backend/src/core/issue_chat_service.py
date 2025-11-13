@@ -1,6 +1,7 @@
 from langgraph.checkpoint.memory import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command, StateSnapshot
+import logging
 
 from src.core.chat_graph.full_chat_graph import FullChatGraph, InputState
 from src.dto.messages import ChatMessage
@@ -14,9 +15,11 @@ class IssueChatService:
 
     checkpointer: BaseCheckpointSaver
     graph: CompiledStateGraph
+    __logger: logging.Logger
 
     def __init__(self,  checkpointer: BaseCheckpointSaver):
         self.checkpointer = checkpointer
+        self.__logger = logging.getLogger(self.__class__.__name__)
 
         self.graph = self.__compile_graph(checkpointer)
 
@@ -41,7 +44,7 @@ class IssueChatService:
             history = graph_state.values.get("messages", [])
             skip_messages = len(history)
 
-        result = await self.graph.ainvoke(graph_input, graph_config)
+        result = await self.graph.ainvoke(graph_input, graph_config, subgraphs=True)
         return result["messages"][skip_messages:]
 
     async def is_ended(self, issue_id: int) -> bool:

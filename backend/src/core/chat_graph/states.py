@@ -11,7 +11,11 @@ def _add_messages_to_state(left: list[ChatMessage], right: list[ChatMessage] | C
     return left + right
 
 
-class BaseState(TypedDict, total=False):
+class InputState(TypedDict, total=False):
+    first_description: str
+
+
+class BaseState(InputState, total=False):
     # Annotated и add_messages обеспечивает добавление новых сообщений в конец списка, вместо перезаписи всего списка
     messages: Annotated[list[ChatMessage], _add_messages_to_state]
     law_docs: list[LawFragment]

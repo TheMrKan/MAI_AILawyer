@@ -20,7 +20,7 @@ class BaseState(InputState, total=False):
     messages: Annotated[list[ChatMessage], _add_messages_to_state]
     law_docs: list[LawFragment]
     can_help: bool
-    confirmation_0: bool
+    laws_confirmed: bool
     templates: list[str]
     relevant_template: str | None
-    confirmation_1: bool
+    template_confirmed: bool

@@ -3,6 +3,7 @@ from langgraph.types import interrupt
 import logging
 
 from src.core.chat_graph.states import BaseState, InputState
+from src.core.chat_graph.common import create_process_confirmation_node
 from src.dto.laws import LawFragment
 from src.dto.messages import ChatMessage
 from src.core import llm_use_cases
@@ -21,18 +22,20 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
         self.__build()
 
     def __build(self):
-        self.add_node("save_first_info", self.__save_first_info)
-        self.add_node("find_law_documents", self.__find_law_documents)
-        self.add_node("analyze_first_info", self.__analyze_first_info)
-        self.add_node("confirm0", self.__process_confirmation("confirmation_0"))
-
         self.add_edge(START, "save_first_info")
+        self.add_node("save_first_info", self.__save_first_info)
         self.add_edge("save_first_info", "find_law_documents")
+
+        self.add_node("find_law_documents", self.__find_law_documents)
         self.add_edge("find_law_documents", "analyze_first_info")
+
+        self.add_node("analyze_first_info", self.__analyze_first_info)
         self.add_conditional_edges("analyze_first_info", self.__continue_if_true("can_help"), {
             "continue": "confirm0",
             "END": END
         })
+
+        self.add_node("confirm0", create_process_confirmation_node("laws_confirmed", self.__logger))
 
     async def __save_first_info(self, state: InputState) -> BaseState:
         system_message = llm_use_cases.get_start_system_message()
@@ -63,14 +66,3 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
             return "continue"
 
         return wrapper
-
-    def __process_confirmation(self, write_to: str):
-        @inject_global
-        async def _internal(state: BaseState, llm: LLMABC) -> BaseState:
-            user_input = interrupt(None)
-            user_message = ChatMessage.from_user(user_input)
-            is_confirmed = await llm_use_cases.is_agreement_async(llm, user_message)
-            self.__logger.info(f"Got user confirmation input (for {write_to}) ({is_confirmed}): {user_input}")
-            return {write_to: is_confirmed, "messages": [ChatMessage.from_user(user_input)]}
-
-        return _internal

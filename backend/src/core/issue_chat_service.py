@@ -31,7 +31,7 @@ class IssueChatService:
 
     async def process_new_user_message(self, issue_id: int, message_text: str) -> list[ChatMessage]:
         graph_config = {"configurable": {"thread_id": issue_id}}
-        graph_state = await self.graph.aget_state(graph_config)
+        graph_state = await self.graph.aget_state(graph_config, subgraphs=True)
 
         skip_messages = 0
 
@@ -41,7 +41,10 @@ class IssueChatService:
             raise GraphError("Чат завершен")
         else:
             graph_input = Command(resume=message_text)
-            history = graph_state.values.get("messages", [])
+            if any(graph_state.tasks):
+                history = graph_state.tasks[0].state.values.get("messages", [])
+            else:
+                history = graph_state.values.get("messages", [])
             skip_messages = len(history)
 
         result = await self.graph.ainvoke(graph_input, graph_config, subgraphs=True)

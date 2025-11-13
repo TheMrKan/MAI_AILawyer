@@ -1,12 +1,34 @@
 from langgraph.types import interrupt
 import logging
+from typing import TypedDict, Annotated
 
 from src.application.provider import inject_global
 from src.core import llm_use_cases
-from src.core.chat_graph.states import BaseState
 from src.core.llm import LLMABC
 from src.dto.messages import ChatMessage
+from src.dto.laws import LawFragment
 
+
+def _add_messages_to_state(left: list[ChatMessage], right: list[ChatMessage] | ChatMessage) -> list[ChatMessage]:
+    if isinstance(right, ChatMessage):
+        return left + [right]
+
+    return left + right
+
+
+class InputState(TypedDict, total=False):
+    first_description: str
+
+
+class BaseState(InputState, total=False):
+    # Annotated и add_messages обеспечивает добавление новых сообщений в конец списка, вместо перезаписи всего списка
+    messages: Annotated[list[ChatMessage], _add_messages_to_state]
+    law_docs: list[LawFragment]
+    can_help: bool
+    laws_confirmed: bool
+    templates: list[str]
+    relevant_template: str | None
+    template_confirmed: bool
 
 def create_process_confirmation_node(write_to: str, logger: logging.Logger):
     @inject_global

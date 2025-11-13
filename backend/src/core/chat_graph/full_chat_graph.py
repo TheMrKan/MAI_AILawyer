@@ -4,6 +4,7 @@ from langgraph.graph import StateGraph, START, END
 from src.core.chat_graph.common import BaseState, InputState
 from src.core.chat_graph.laws_analysis_subgraph import LawsAnalysisSubgraph
 from src.core.chat_graph.template_analysis_subgraph import TemplateAnalysisSubgraph
+from src.core.chat_graph.free_template_subgraph import FreeTemplateSubgraph
 
 
 logger = logging.getLogger(__name__)
@@ -25,13 +26,16 @@ class FullChatGraph(StateGraph[BaseState, None, InputState, BaseState]):
 
         self.add_node("template_analysis_subgraph", TemplateAnalysisSubgraph().compile())
         self.add_conditional_edges("template_analysis_subgraph", self.__path_selector, {
-            "free": END,
+            "free": "free_template_subgraph",
             "strict": END,
+            "END": END
         })
+
+        self.add_node("free_template_subgraph", FreeTemplateSubgraph().compile())
 
     @staticmethod
     def __path_selector(state: BaseState) -> str:
-        if not state["laws_confirmed"]:
+        if not state["template_confirmed"]:
             return "END"
 
         if "free" in state["relevant_template"]:

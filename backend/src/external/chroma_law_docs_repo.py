@@ -13,11 +13,28 @@ class ChromaLawDocsRepository(BaseChromaRepository, LawDocsRepositoryABC):
         query_result = await self._collection.query(query_texts=[query], n_results=5)
         result = []
 
-        for frag_id, doc, dst, meta in zip(query_result["ids"][0],
+        for frag_id, doc, meta in zip(query_result["ids"][0],
                                      query_result["documents"][0],
-                                     query_result["distances"][0],
                                      query_result["metadatas"][0]):
-            result.append(LawFragment(frag_id, meta["law_doc_id"], doc, dst))
+            result.append(LawFragment(frag_id, meta["law_doc_id"], doc))
 
         return result
 
+    async def list_fragments_async(self) -> list[LawFragment]:
+        result = await self._collection.get(include=["documents", "metadatas"])
+        fragments = []
+
+        for frag_id, doc, meta in zip(result["ids"], result["documents"], result["metadatas"]):
+            fragments.append(LawFragment(frag_id, meta["law_doc_id"], doc))
+
+        return fragments
+
+    async def add_of_update_fragment_async(self, fragment: LawFragment):
+        await self._collection.upsert(
+            ids=[fragment.fragment_id],
+            documents=[fragment.content],
+            metadatas=[{"law_doc_id": fragment.document_id}]
+        )
+
+    async def delete_fragment_async(self, fragment_id: str):
+        await self._collection.delete(ids=[fragment_id])

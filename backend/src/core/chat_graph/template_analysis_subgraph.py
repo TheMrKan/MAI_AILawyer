@@ -4,6 +4,8 @@ import asyncio
 
 from src.core.chat_graph.common import BaseState, create_process_confirmation_node
 from src.dto.messages import ChatMessage
+from src.core.templates import TemplatesRepositoryABC
+from src.application.provider import inject_global
 
 
 class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]):
@@ -28,10 +30,10 @@ class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]
 
         self.add_node("confirm1", create_process_confirmation_node("template_confirmed", self.__logger))
 
-    async def __find_templates(self, state: BaseState) -> BaseState:
+    @inject_global
+    async def __find_templates(self, state: BaseState, repo: TemplatesRepositoryABC) -> BaseState:
         self.__logger.info("Searching for templates...")
-        await asyncio.sleep(1)
-        templates = ["Шаблон 1 (strict)", "Шаблон 2 (free)", "Шаблон 3 (free)", "Шаблон 4 (strict)", "Шаблон 5 (free)"]
+        templates = await repo.find_templates_async(state["first_description"])
         self.__logger.info(f"Found templates: {templates}")
         return {"templates": templates}
 
@@ -40,7 +42,7 @@ class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]
         await asyncio.sleep(1)
         relevant = state["templates"][0]
         new_messages = [
-            ChatMessage.from_ai(f"Нашел подходящий шаблон обращения: {relevant}.\n\n"
+            ChatMessage.from_ai(f"Нашел подходящий шаблон обращения: {relevant.title}.\n\n"
                                 f"Этот документ бла-бла-бла...\n"
                                 f"Хотите, я помогу составить обращение?")
         ]

@@ -65,10 +65,10 @@ async def build_async() -> Provider:
     from src.external.cerebras_llm import CerebrasLLM
     provider.register_singleton(LLMABC, CerebrasLLM())
 
-    from src.core.graph_controller import GraphController
+    from src.core.issue_chat_service import IssueChatService
     from langgraph.checkpoint.memory import InMemorySaver
     checkpointer = InMemorySaver()
-    provider.register_singleton(GraphController, GraphController(checkpointer))
+    provider.register_singleton(IssueChatService, IssueChatService(checkpointer))
 
     from src.core.laws import LawDocsRepositoryABC
     from src.external.chroma_law_docs_repo import ChromaLawDocsRepository

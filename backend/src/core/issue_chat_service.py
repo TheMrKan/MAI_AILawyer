@@ -1,8 +1,9 @@
 from langgraph.checkpoint.memory import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command, StateSnapshot
+import logging
 
-from src.core.issue_graph import IssueGraph, InputState
+from src.core.chat_graph.full_chat_graph import FullChatGraph, InputState
 from src.dto.messages import ChatMessage
 
 
@@ -10,25 +11,28 @@ class GraphError(Exception):
     pass
 
 
-class GraphController:
+class IssueChatService:
 
     checkpointer: BaseCheckpointSaver
     graph: CompiledStateGraph
+    __logger: logging.Logger
 
     def __init__(self,  checkpointer: BaseCheckpointSaver):
         self.checkpointer = checkpointer
+        self.__logger = logging.getLogger(self.__class__.__name__)
 
         self.graph = self.__compile_graph(checkpointer)
 
     @staticmethod
     def __compile_graph(checkpointer: BaseCheckpointSaver) -> CompiledStateGraph:
-        graph = IssueGraph()
+        graph = FullChatGraph()
         compiled = graph.compile(checkpointer=checkpointer)
         return compiled
 
-    async def invoke_with_new_message(self, thread_id: int, message_text: str) -> list[ChatMessage]:
-        graph_config = {"configurable": {"thread_id": thread_id}}
-        graph_state = await self.graph.aget_state(graph_config)
+    async def process_new_user_message(self, issue_id: int, message_text: str) -> list[ChatMessage]:
+        graph_config = {"configurable": {"thread_id": issue_id}}
+        graph_state = await self.graph.aget_state(graph_config, subgraphs=True)
+        self.__logger.debug(graph_state)
 
         skip_messages = 0
 
@@ -38,14 +42,17 @@ class GraphController:
             raise GraphError("Чат завершен")
         else:
             graph_input = Command(resume=message_text)
-            history = graph_state.values.get("messages", [])
+            if any(graph_state.tasks):
+                history = graph_state.tasks[0].state.values.get("messages", [])
+            else:
+                history = graph_state.values.get("messages", [])
             skip_messages = len(history)
 
-        result = await self.graph.ainvoke(graph_input, graph_config)
+        result = await self.graph.ainvoke(graph_input, graph_config, subgraphs=True)
         return result["messages"][skip_messages:]
 
-    async def is_ended(self, thread_id: int) -> bool:
-        graph_config = {"configurable": {"thread_id": thread_id}}
+    async def is_ended(self, issue_id: int) -> bool:
+        graph_config = {"configurable": {"thread_id": issue_id}}
         graph_state = await self.graph.aget_state(graph_config)
         return self.__is_ended(graph_state)
 

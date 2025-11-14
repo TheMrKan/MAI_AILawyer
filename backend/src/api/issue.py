@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Self, Annotated
 import logging
 
-from src.core.graph_controller import GraphController, GraphError
+from src.core.issue_chat_service import IssueChatService, GraphError
 from src.application.provider import Provider
 from src.dto.messages import ChatMessage, MessageRole as DtoMessageRole
 
@@ -46,9 +46,10 @@ def __should_message_be_returned(dto: ChatMessage) -> bool:
 async def chat(issue_id: int, message: AddUserMessageSchema,
                provider: Annotated[Provider, Depends(Provider)]) -> ChatUpdateSchema:
     try:
-        dto_messages = await provider[GraphController].invoke_with_new_message(issue_id, message.text)
+        chat_service = provider[IssueChatService]
+        dto_messages = await chat_service.process_new_user_message(issue_id, message.text)
         new_messages = [MessageSchema.from_dto(message) for message in dto_messages if __should_message_be_returned(message)]
-        is_ended = await provider[GraphController].is_ended(issue_id)
+        is_ended = await chat_service.is_ended(issue_id)
     except GraphError as e:
         logger.exception("Graph error", exc_info=e)
         raise HTTPException(status_code=400, detail=str(e))

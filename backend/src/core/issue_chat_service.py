@@ -32,7 +32,6 @@ class IssueChatService:
     async def process_new_user_message(self, issue_id: int, message_text: str) -> list[ChatMessage]:
         graph_config = {"configurable": {"thread_id": issue_id}}
         graph_state = await self.graph.aget_state(graph_config, subgraphs=True)
-        self.__logger.debug(graph_state)
 
         skip_messages = 0
 

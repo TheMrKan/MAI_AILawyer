@@ -16,7 +16,7 @@ class _TemplateMetadata(pydantic.BaseModel):
     type: Literal["free", "strict"]
     title: str
     storage_filename: str
-    fields: str | None
+    fields: str | None = None
 
 
 class ChromaTemplatesRepository(BaseChromaRepository, TemplatesRepositoryABC):
@@ -32,10 +32,11 @@ class ChromaTemplatesRepository(BaseChromaRepository, TemplatesRepositoryABC):
             data = _TemplateMetadata(**meta)
             if data.type == "strict":
                 obj = StrictTemplate(tpl_id, data.title, data.storage_filename, {})
-                fields = json.loads(data.fields)
-                for raw_field in fields:
-                    field = _TemplateField(**raw_field)
-                    obj.fields[field.key] = StrictTemplateField(field.key, field.agent_instructions)
+                if data.fields:
+                    fields = json.loads(data.fields)
+                    for raw_field in fields:
+                        field = _TemplateField(**raw_field)
+                        obj.fields[field.key] = StrictTemplateField(field.key, field.agent_instructions)
             else:
                 obj = FreeTemplate(tpl_id, data.title, data.storage_filename)
 

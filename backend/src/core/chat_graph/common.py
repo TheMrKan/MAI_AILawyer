@@ -7,6 +7,7 @@ from src.core import llm_use_cases
 from src.core.llm import LLMABC
 from src.dto.messages import ChatMessage
 from src.dto.laws import LawFragment
+from src.dto.templates import Template
 
 
 def _add_messages_to_state(left: list[ChatMessage], right: list[ChatMessage] | ChatMessage) -> list[ChatMessage]:
@@ -26,8 +27,8 @@ class BaseState(InputState, total=False):
     law_docs: list[LawFragment]
     can_help: bool
     laws_confirmed: bool
-    templates: list[str]
-    relevant_template: str | None
+    templates: list[Template]
+    relevant_template: Template | None
     template_confirmed: bool
 
 

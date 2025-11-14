@@ -70,10 +70,19 @@ async def build_async() -> Provider:
     checkpointer = InMemorySaver()
     provider.register_singleton(IssueChatService, IssueChatService(checkpointer))
 
+    import chromadb
+    chroma_client = await chromadb.AsyncHttpClient(host="chroma", port=8000)
+
     from src.core.laws import LawDocsRepositoryABC
     from src.external.chroma_law_docs_repo import ChromaLawDocsRepository
-    chroma_repo = ChromaLawDocsRepository("chroma", 8000)
-    await chroma_repo.init_async()
-    provider.register_singleton(LawDocsRepositoryABC, chroma_repo)
+    laws_repo = ChromaLawDocsRepository(chroma_client)
+    await laws_repo.init_async()
+    provider.register_singleton(LawDocsRepositoryABC, laws_repo)
+
+    from src.core.templates import TemplatesRepositoryABC
+    from src.external.chroma_templates_repo import ChromaTemplatesRepository
+    templates_repo = ChromaTemplatesRepository(chroma_client)
+    await templates_repo.init_async()
+    provider.register_singleton(TemplatesRepositoryABC, templates_repo)
 
     return provider

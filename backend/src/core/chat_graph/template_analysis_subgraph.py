@@ -4,6 +4,8 @@ import asyncio
 
 from src.core.chat_graph.common import BaseState, create_process_confirmation_node
 from src.dto.messages import ChatMessage
+from src.core.templates import TemplatesRepositoryABC
+from src.application.provider import inject_global
 
 
 class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]):
@@ -28,7 +30,8 @@ class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]
 
         self.add_node("confirm1", create_process_confirmation_node("template_confirmed", self.__logger))
 
-    async def __find_templates(self, state: BaseState) -> BaseState:
+    @inject_global
+    async def __find_templates(self, state: BaseState, repo: TemplatesRepositoryABC) -> BaseState:
         self.__logger.info("Searching for templates...")
         await asyncio.sleep(1)
         templates = ["Шаблон 1 (strict)", "Шаблон 2 (free)", "Шаблон 3 (free)", "Шаблон 4 (strict)", "Шаблон 5 (free)"]

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.dto.templates import Template
+from src.core.templates.types import Template
 
 
 class TemplatesRepositoryABC(ABC):

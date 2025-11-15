@@ -4,7 +4,7 @@ import asyncio
 
 from src.core.chat_graph.common import BaseState, create_process_confirmation_node
 from src.dto.messages import ChatMessage
-from src.core.templates import TemplatesRepositoryABC
+from src.core.templates.iface import TemplatesRepositoryABC
 from src.application.provider import inject_global
 
 

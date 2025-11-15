@@ -6,5 +6,4 @@ class LawFragment:
     fragment_id: str
     document_id: str
     content: str
-    distance: float
 

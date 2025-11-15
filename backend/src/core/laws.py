@@ -9,36 +9,14 @@ class LawDocsRepositoryABC(ABC):
     async def find_fragments_async(self, query: str) -> list[LawFragment]:
         pass
 
+    @abstractmethod
+    async def list_fragments_async(self) -> list[LawFragment]:
+        pass
 
-class TempLawDocsRepository(LawDocsRepositoryABC):
+    @abstractmethod
+    async def add_of_update_fragment_async(self, fragment: LawFragment):
+        pass
 
-    __FRAGMENTS = [
-        LawFragment(1, 1,
-        """
-        Статья 114. Право на отпуск
-        Каждому работнику предоставляется ежегодный оплачиваемый отпуск с сохранением места работы и среднего заработка.
-        """, 0),
-        LawFragment(1, 2,
-        """
-        Статья 115. Продолжительность отпуска
-        Минимальная продолжительность — 28 календарных дней. Для некоторых категорий работников (например, педагогов или госслужащих) отпуск может быть длиннее.
-        """, 0),
-        LawFragment(1, 3,
-        """
-        Статья 123. График отпусков
-        График утверждается работодателем не позднее чем за 2 недели до нового года, и работник должен быть уведомлён о начале отпуска не позднее чем за 2 недели.
-        """, 0),
-        LawFragment(1, 4,
-        """
-        Статья 125. Разделение отпуска
-        Отпуск можно разделить на части, но одна из них должна быть не меньше 14 календарных дней.
-        """, 0),
-        LawFragment(1, 5,
-        """
-        Статья 126. Денежная компенсация
-        Неиспользованные дни отпуска можно заменить деньгами, но только за часть, превышающую 28 дней (основной отпуск деньгами не заменяется, кроме увольнения).
-        """, 0)
-    ]
-
-    async def find_fragments_async(self, query: str) -> list[LawFragment]:
-        return self.__FRAGMENTS.copy()
+    @abstractmethod
+    async def delete_fragment_async(self, fragment_id: str):
+        pass

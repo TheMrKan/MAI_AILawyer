@@ -1,6 +1,5 @@
-from contextlib import contextmanager
-import docx
-from typing import Generator
+from docxtpl import DocxTemplate
+from typing import BinaryIO
 
 from src.core.templates.iface import TemplatesFileStorageABC
 from src.core.templates.types import Template
@@ -13,23 +12,29 @@ class TemplateFileService:
     def __init__(self, templates_storage: TemplatesFileStorageABC):
         self.templates_storage = templates_storage
 
-    @contextmanager
-    def __open_docx(self, filename: str) -> Generator[docx.Document, None, None]:
+    def __get_docx(self, filename: str) -> DocxTemplate:
         with self.templates_storage.open_template_file(filename) as file:
-            yield docx.Document(file)
+            tpl = DocxTemplate(file)
+            tpl.init_docx()
+            return tpl
 
     def extract_text(self, template: Template) -> str:
-        with self.__open_docx(template.storage_filename) as doc:
-            chunks = []
-            for p in doc.paragraphs:
-                if p.text.strip():
-                    chunks.append(p.text)
+        doc = self.__get_docx(template.storage_filename)
+        chunks = []
 
-            for table in doc.tables:
-                for row in table.rows:
-                    for cell in row.cells:
-                        txt = cell.text.strip()
-                        if txt:
-                            chunks.append(txt)
+        for p in doc.docx.paragraphs:
+            if p.text.strip():
+                chunks.append(p.text)
 
-            return "\n".join(chunks)
+        for table in doc.docx.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    if cell.text.strip():
+                        chunks.append(cell.text)
+
+        return "\n".join(chunks)
+
+    def fill_with_values(self, template: Template, values: dict[str, str], output: BinaryIO):
+        doc = self.__get_docx(template.storage_filename)
+        doc.render(values)
+        doc.save(output)

@@ -2,8 +2,8 @@ import pydantic
 from typing import Literal
 import json
 
-from src.core.templates import TemplatesRepositoryABC
-from src.dto.templates import Template, FreeTemplate, StrictTemplate, StrictTemplateField
+from src.core.templates.iface import TemplatesRepositoryABC
+from src.core.templates.types import Template, FreeTemplate, StrictTemplate, StrictTemplateField
 from src.external.base_chroma_repository import BaseChromaRepository
 
 

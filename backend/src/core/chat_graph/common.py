@@ -7,7 +7,7 @@ from src.core import llm_use_cases
 from src.core.llm import LLMABC
 from src.dto.messages import ChatMessage
 from src.dto.laws import LawFragment
-from src.dto.templates import Template
+from src.core.templates.types import Template
 
 
 def _add_messages_to_state(left: list[ChatMessage], right: list[ChatMessage] | ChatMessage) -> list[ChatMessage]:

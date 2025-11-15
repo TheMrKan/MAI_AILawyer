@@ -1,7 +1,7 @@
 import logging
 from langgraph.graph import StateGraph, START, END
 
-from src.dto.templates import FreeTemplate
+from src.core.templates.types import FreeTemplate
 from src.core.chat_graph.common import BaseState, InputState
 from src.core.chat_graph.laws_analysis_subgraph import LawsAnalysisSubgraph
 from src.core.chat_graph.template_analysis_subgraph import TemplateAnalysisSubgraph

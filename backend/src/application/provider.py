@@ -79,7 +79,7 @@ async def build_async() -> Provider:
     await laws_repo.init_async()
     provider.register_singleton(LawDocsRepositoryABC, laws_repo)
 
-    from src.core.templates import TemplatesRepositoryABC
+    from src.core.templates.iface import TemplatesRepositoryABC
     from src.external.chroma_templates_repo import ChromaTemplatesRepository
     templates_repo = ChromaTemplatesRepository(chroma_client)
     await templates_repo.init_async()

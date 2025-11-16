@@ -2,15 +2,18 @@ services:
   backend:
     build:
       context: ./backend
-      target: app_dev
     container_name: backend
     env_file:
       - ./backend/.env
+    environment:
+      - "TEMPLATES_DIR=/app/templates"
     ports:
       - "8000:8000"
     volumes:
       - "./backend/src:/app/src"
+      - "./backend/experiments:/app/experiments"
       - "./backend/models/onnx_models:/root/.cache/chroma/onnx_models"
+      - "./backend/templates:/app/templates"
     restart: no
 
   chroma:

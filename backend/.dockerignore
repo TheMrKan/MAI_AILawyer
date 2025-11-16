@@ -1,3 +1,5 @@
 .env
 experiments
 templates
+models
+.venv

@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from functools import wraps
 import inspect
+import os
+from pathlib import Path
 
 
 class FactoryABC[T](ABC):
@@ -84,5 +86,16 @@ async def build_async() -> Provider:
     templates_repo = ChromaTemplatesRepository(chroma_client)
     await templates_repo.init_async()
     provider.register_singleton(TemplatesRepositoryABC, templates_repo)
+
+    from src.core.templates.iface import TemplatesFileStorageABC
+    from src.external.fs_templates_storage import FilesystemTemplatesStorage
+    templates_dir = Path(os.getenv("TEMPLATES_DIR") or "")
+    if not templates_dir.exists():
+        raise Exception("TEMPLATES_DIR env var must be set")
+    templates_storage = FilesystemTemplatesStorage(templates_dir)
+    provider.register_singleton(TemplatesFileStorageABC, templates_storage)
+
+    from src.core.templates.file_service import TemplateFileService
+    provider.register_singleton(TemplateFileService, TemplateFileService(templates_storage))
 
     return provider

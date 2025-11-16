@@ -15,7 +15,7 @@ class CerebrasLLM(LLMABC):
         MessageRole.AI: "assistant"
     }
 
-    MODEL_STRONG = "qwen-3-235b-a22b-thinking-2507"
+    MODEL_STRONG = "qwen-3-235b-a22b-instruct-2507"
     MODEL_WEAK = "llama3.1-8b"
 
     cerebras: AsyncCerebras

@@ -1,5 +1,7 @@
-.env
-experiments
-templates
-models
-.venv
+.env/
+experiments/
+templates/
+models/
+.venv/
+**/__pycache__/
+**/*.py[cod]

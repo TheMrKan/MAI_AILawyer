@@ -21,7 +21,7 @@ class FullChatGraph(StateGraph[BaseState, None, InputState, BaseState]):
     def __build(self):
         self.add_edge(START, "laws_analysis_subgraph")
         self.add_node("laws_analysis_subgraph", LawsAnalysisSubgraph().compile())
-        self.add_conditional_edges("laws_analysis_subgraph", lambda state: state["laws_confirmed"], {
+        self.add_conditional_edges("laws_analysis_subgraph", lambda state: state.get("laws_confirmed", False), {
             True: "template_analysis_subgraph",
             False: END
         })

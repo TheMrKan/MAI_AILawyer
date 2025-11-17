@@ -1,7 +1,6 @@
 import logging
 from langgraph.graph import StateGraph, START, END
 
-from src.core.templates.types import FreeTemplate
 from src.core.chat_graph.common import BaseState, InputState
 from src.core.chat_graph.laws_analysis_subgraph import LawsAnalysisSubgraph
 from src.core.chat_graph.template_analysis_subgraph import TemplateAnalysisSubgraph
@@ -38,12 +37,12 @@ class FullChatGraph(StateGraph[BaseState, None, InputState, BaseState]):
 
     @staticmethod
     def __path_selector(state: BaseState) -> str:
-        if not state["template_confirmed"]:
+        if not state.get("template_confirmed", False):
             return "END"
 
-        if isinstance(state["relevant_template"], FreeTemplate):
-            return "free"
-        return "strict"
+        if state.get("relevant_template", None):
+            return "strict"
+        return "free"
 
 
 

@@ -14,3 +14,7 @@ __pycache__/
 *.so
 .env/
 .env
+env/
+venv/
+.venv/
+.env

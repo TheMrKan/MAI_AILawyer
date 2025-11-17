@@ -5,11 +5,13 @@ logging.setup()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 
 from src.api.issue import router as issue_router
 from src.api.laws import router as laws_router
 from src.application import provider
 
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):

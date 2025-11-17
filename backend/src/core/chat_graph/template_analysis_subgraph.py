@@ -3,8 +3,11 @@ import logging
 import asyncio
 
 from src.core.chat_graph.common import BaseState, create_process_confirmation_node
+from src.core.llm import LLMABC
 from src.dto.messages import ChatMessage
 from src.core.templates.iface import TemplatesRepositoryABC
+from src.core.templates.file_service import TemplateFileService
+from src.core import llm_use_cases
 from src.application.provider import inject_global
 
 
@@ -37,14 +40,13 @@ class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]
         self.__logger.info(f"Found templates: {templates}")
         return {"templates": templates}
 
-    async def __analyze_templates(self, state: BaseState) -> BaseState:
+    @inject_global
+    async def __analyze_templates(self, state: BaseState, service: TemplateFileService, llm: LLMABC) -> BaseState:
         self.__logger.info("Analyzing templates...")
-        await asyncio.sleep(1)
-        relevant = state["templates"][0]
-        new_messages = [
-            ChatMessage.from_ai(f"Нашел подходящий шаблон обращения: {relevant.title}.\n\n"
-                                f"Этот документ бла-бла-бла...\n"
-                                f"Хотите, я помогу составить обращение?")
-        ]
+        texts = [service.extract_text(tpl) for tpl in state["templates"]]
+
+        result = await llm_use_cases.analyze_templates_async(llm, state["messages"], texts)
+        relevant = state["templates"][result.relevant_template_index] if result.relevant_template_index is not None else None
+
         self.__logger.info("Selected relevant template: %s", relevant)
-        return {"relevant_template": relevant, "messages": new_messages}
+        return {"relevant_template": relevant, "messages": [result.user_message]}

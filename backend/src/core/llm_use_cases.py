@@ -1,6 +1,8 @@
 import json
 from pydantic import BaseModel
 from dataclasses import dataclass
+from collections import namedtuple
+from typing import NamedTuple
 
 from src.core.llm import LLMABC
 from src.dto.messages import ChatMessage
@@ -78,3 +80,45 @@ __CHECK_AGREEMENT_MESSAGE = ChatMessage.from_system("""
 async def is_agreement_async(llm: LLMABC, message: ChatMessage) -> bool:
     ai_response = await llm.invoke_async(weak_model=True, messages=[__CHECK_AGREEMENT_MESSAGE, message])
     return "1" in ai_response.text
+
+
+__TEMPLATES_ANALYSIS_MESSAGE = ChatMessage.from_system("""
+Выше даны тексты шаблонов документов для анализа. 
+Твоя задача - определить, какой шаблон обращение больше всего подходит к описанной ситуации.
+Если считаешь, что ни один шаблон не подходит, то нужно это явно обозначить. Сообщи пользователю, что не нашел подходящего шаблона в базе и что не можешь помочь.
+Не упоминай шаблоны, которые не подходят к данной ситуации.
+Также дай краткое описание шаблона для пользователя и спроси, устраивает ли его этот шаблон и хочет ли он продолжить работу.
+Текст для пользователя может выглядить подобным образом: "Я нашел подходящий шаблон в своей базе: <описание шаблона>"
+Шаблоны нумеруются с нуля сверху вниз. Номер подходящего шаблона укажи в поле "relevant_template_index". Если нет подходящего шаблона, то укажи -1 в этом поле.
+Ответ дай в формате JSON строго по заданной схеме без лишнего текста:
+{
+    "relevant_template_index": 0,
+    "user_message": "Текст ответа для пользователя"
+}
+""")
+
+
+class __TemplatesAnalysisLLMResponseSchema(BaseModel):
+    relevant_template_index: int
+    user_message: str
+
+class TemplatesAnalysisResult(NamedTuple):
+    relevant_template_index: int | None
+    user_message: ChatMessage
+
+
+async def analyze_templates_async(llm: LLMABC,
+                             chat_history: list[ChatMessage],
+                             template_texts: list[str]) -> TemplatesAnalysisResult:
+    prompt = [*chat_history]
+    for text in template_texts:
+        prompt.append(ChatMessage.from_system(text))
+    prompt.append(__TEMPLATES_ANALYSIS_MESSAGE)
+
+    ai_reponse = await llm.invoke_async(messages=prompt)
+    # даст исключение, если формат не соблюден
+    parsed = json.loads(ai_reponse.text)
+    validated = __TemplatesAnalysisLLMResponseSchema(**parsed)
+
+    index = validated.relevant_template_index if validated.relevant_template_index >= 0 else None
+    return TemplatesAnalysisResult(index, ChatMessage.from_ai(validated.user_message))

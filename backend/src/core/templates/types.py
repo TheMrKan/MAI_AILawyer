@@ -2,23 +2,14 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Template:
-    id: str
-    title: str
-    storage_filename: str
-
-
-@dataclass
-class FreeTemplate(Template):
-    pass
-
-
-@dataclass
-class StrictTemplateField:
+class TemplateField:
     key: str
     agent_instructions: str
 
 
 @dataclass
-class StrictTemplate(Template):
-    fields: dict[str, StrictTemplateField]
+class Template:
+    id: str
+    title: str
+    storage_filename: str
+    fields: dict[str, TemplateField]

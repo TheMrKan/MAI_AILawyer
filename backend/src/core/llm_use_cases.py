@@ -1,12 +1,12 @@
 import json
 from pydantic import BaseModel
 from dataclasses import dataclass
-from collections import namedtuple
 from typing import NamedTuple
 
 from src.core.llm import LLMABC
 from src.dto.messages import ChatMessage
 from src.dto.laws import LawFragment
+from src.core.templates.types import Template
 
 
 @dataclass
@@ -103,6 +103,7 @@ class __TemplatesAnalysisLLMResponseSchema(BaseModel):
     relevant_template_index: int
     user_message: str
 
+
 class TemplatesAnalysisResult(NamedTuple):
     relevant_template_index: int | None
     user_message: ChatMessage
@@ -123,3 +124,26 @@ async def analyze_templates_async(llm: LLMABC,
 
     index = validated.relevant_template_index if validated.relevant_template_index >= 0 else None
     return TemplatesAnalysisResult(index, ChatMessage.from_ai(validated.user_message))
+
+
+__FREE_TEMPLATE_SETUP_TEXT = """
+Теперь ты должен оставить обращение в свободной форме. Выше дан текст шаблона. У обращения есть несколько обязательных полей, которые тебе нужно заполнить:
+{fields}
+В поле с основным содержимым ты должен вписать текст обращения.
+Задавай пользователю вопросы до тех пор, пока информации не будет достаточно для составления текста. Веди с ним диалог.
+Твой ответ должен быть строго в JSON формате.
+"user_message" - это текст вопроса, который нужно задать пользователю.
+"is_ready" - bool флаг, показывающий, достаточно ли сейчас информации. Когда информации будет достаточно, верни "is_ready" = true. Тогда "user_message" оставь пустым.
+{{
+    "user_message": "Вопрос пользователю?",
+    "is_ready": false
+}}
+"""
+
+
+def setup_free_template_loop(free_template: Template, free_template_text: str) -> list[ChatMessage]:
+    rendered_fields = "\n".join(f"{f.key} - {f.agent_instructions}" for f in free_template.fields.values())
+    return [
+        ChatMessage.from_system(free_template_text),
+        ChatMessage.from_system(__FREE_TEMPLATE_SETUP_TEXT.format(fields=rendered_fields))
+    ]

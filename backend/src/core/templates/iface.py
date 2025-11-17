@@ -7,6 +7,10 @@ from src.core.templates.types import Template
 class TemplatesRepositoryABC(ABC):
 
     @abstractmethod
+    async def get_template_async(self, tpl_id: str) -> Template:
+        pass
+
+    @abstractmethod
     async def find_templates_async(self, query: str, exclude_ids: list[str] | None = None) -> list[Template]:
         pass
 

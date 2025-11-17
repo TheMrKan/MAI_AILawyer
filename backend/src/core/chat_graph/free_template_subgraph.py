@@ -3,7 +3,12 @@ from langgraph.types import interrupt
 import logging
 
 from src.core.chat_graph.common import BaseState, FreeTemplateState
+from src.core.templates.service import TemplateService
+from src.core.templates.file_service import TemplateFileService
+from src.core import llm_use_cases
+from src.core.llm import LLMABC
 from src.dto.messages import ChatMessage
+from src.application.provider import inject_global
 
 
 class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTemplateState]):
@@ -29,14 +34,17 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
             True: END
         })
 
-
-
-    def __setup_loop(self, state: BaseState) -> FreeTemplateState:
+    @inject_global
+    async def __setup_loop(self,
+                           state: BaseState,
+                           service: TemplateService,
+                           file_service: TemplateFileService) -> FreeTemplateState:
         self.__logger.debug("Setting up QA loop...")
-        return {"messages": [
-            ChatMessage.from_ai("Я рад, что могу быть полезен. Обращение будет в свободной форме. Мне понадобится некоторая дополнительная информация."),
-            ChatMessage.from_system("Вот шаблон обращения в свободной форме.\nБла-бла-бла...\nЗадавай вопросы, пока информации не будет достаточно")
-        ]}
+
+        free_template = await service.get_free_template_async()
+        text = file_service.extract_text(free_template)
+
+        return {"messages": llm_use_cases.setup_free_template_loop(free_template, text)}
 
     def __ask(self, state: FreeTemplateState) -> FreeTemplateState:
         self.__logger.debug("Asking...")

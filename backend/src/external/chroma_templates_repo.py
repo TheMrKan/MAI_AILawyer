@@ -23,8 +23,15 @@ class ChromaTemplatesRepository(BaseChromaRepository, TemplatesRepositoryABC):
 
     _COLLECTION_NAME = "templates"
 
-    async def find_templates_async(self, query: str) -> list[Template]:
-        query_result = await self._collection.query(query_texts=[query], n_results=3)
+    async def find_templates_async(self, query: str, exclude_ids: list[str] | None = None) -> list[Template]:
+        where = None
+        if exclude_ids:
+            where = {
+                "ids": {
+                    "$nin": exclude_ids
+                }
+            }
+        query_result = await self._collection.query(query_texts=[query], n_results=3, where=where)
         result = []
 
         for tpl_id, meta in zip(query_result["ids"][0],

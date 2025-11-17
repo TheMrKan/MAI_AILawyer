@@ -44,7 +44,6 @@ class Provider:
         self.mapping[interface] = Singleton(instance)
 
 
-
 def inject_global(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
@@ -57,7 +56,6 @@ def inject_global(func):
         return await func(*args, **kwargs)
 
     return wrapper
-
 
 
 async def build_async() -> Provider:
@@ -86,6 +84,9 @@ async def build_async() -> Provider:
     templates_repo = ChromaTemplatesRepository(chroma_client)
     await templates_repo.init_async()
     provider.register_singleton(TemplatesRepositoryABC, templates_repo)
+
+    from src.core.templates.service import TemplateService
+    provider.register_singleton(TemplateService, TemplateService(templates_repo))
 
     from src.core.templates.iface import TemplatesFileStorageABC
     from src.external.fs_templates_storage import FilesystemTemplatesStorage

@@ -5,7 +5,7 @@ import asyncio
 from src.core.chat_graph.common import BaseState, create_process_confirmation_node
 from src.core.llm import LLMABC
 from src.dto.messages import ChatMessage
-from src.core.templates.iface import TemplatesRepositoryABC
+from src.core.templates.service import TemplateService
 from src.core.templates.file_service import TemplateFileService
 from src.core import llm_use_cases
 from src.application.provider import inject_global
@@ -34,9 +34,9 @@ class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]
         self.add_node("confirm1", create_process_confirmation_node("template_confirmed", self.__logger))
 
     @inject_global
-    async def __find_templates(self, state: BaseState, repo: TemplatesRepositoryABC) -> BaseState:
+    async def __find_templates(self, state: BaseState, service: TemplateService) -> BaseState:
         self.__logger.info("Searching for templates...")
-        templates = await repo.find_templates_async(state["first_description"])
+        templates = await service.find_templates_async(state["first_description"])
         self.__logger.info(f"Found templates: {templates}")
         return {"templates": templates}
 

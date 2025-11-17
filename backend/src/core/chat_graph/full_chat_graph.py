@@ -38,7 +38,7 @@ class FullChatGraph(StateGraph[BaseState, None, InputState, BaseState]):
 
     @staticmethod
     def __path_selector(state: BaseState) -> str:
-        if not state["template_confirmed"]:
+        if not state.get("template_confirmed", False):
             return "END"
 
         if isinstance(state["relevant_template"], FreeTemplate):

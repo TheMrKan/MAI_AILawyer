@@ -15,7 +15,7 @@ class CerebrasLLM(LLMABC):
         MessageRole.AI: "assistant"
     }
 
-    MODEL_STRONG = "qwen-3-235b-a22b-instruct-2507"
+    MODEL_STRONG = "zai-glm-4.6"
     MODEL_WEAK = "llama3.1-8b"
 
     cerebras: AsyncCerebras
@@ -56,5 +56,9 @@ class CerebrasLLM(LLMABC):
         think_end = text.find("</think>")
         if think_end != -1:
             text = text[think_end+len("</think>"):]
+
+        json_start, json_end = text.find("{"), text.rfind("}")
+        if json_start != -1 and json_end != -1:
+            text = text[json_start:json_end+1]
 
         return ChatMessage.from_ai(text)

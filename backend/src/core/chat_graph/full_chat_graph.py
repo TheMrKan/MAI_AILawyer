@@ -41,9 +41,9 @@ class FullChatGraph(StateGraph[BaseState, None, InputState, BaseState]):
         if not state.get("template_confirmed", False):
             return "END"
 
-        if isinstance(state["relevant_template"], FreeTemplate):
-            return "free"
-        return "strict"
+        if state.get("relevant_template", None):
+            return "strict"
+        return "free"
 
 
 

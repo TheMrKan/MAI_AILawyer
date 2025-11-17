@@ -26,11 +26,7 @@ class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]
         self.add_node("find_templates", self.__find_templates)
         self.add_edge("find_templates", "analyze_templates")
         self.add_node("analyze_templates", self.__analyze_templates)
-        self.add_conditional_edges("analyze_templates", lambda state: bool(state["relevant_template"]), {
-            True: "confirm1",
-            False: END
-        })
-
+        self.add_edge("analyze_templates", "confirm1")
         self.add_node("confirm1", create_process_confirmation_node("template_confirmed", self.__logger))
 
     @inject_global

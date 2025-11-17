@@ -1,11 +1,14 @@
+# database/connection.py
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from backend.experiments.auth.config import settings
+from config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
 Base = declarative_base()
+
+from database.models import User
 
 database_url = settings.DATABASE_URL
 

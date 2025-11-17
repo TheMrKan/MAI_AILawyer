@@ -3,8 +3,8 @@ from cerebras.cloud.sdk import AsyncCerebras
 from cerebras.cloud.sdk.types.chat.chat_completion import ChatCompletionResponseChoiceMessage
 from typing import Iterable
 
-from src.core.llm import LLMABC
-from src.dto.messages import ChatMessage, MessageRole
+from core.llm import LLMABC
+from dto.messages import ChatMessage, MessageRole
 
 
 class CerebrasLLM(LLMABC):

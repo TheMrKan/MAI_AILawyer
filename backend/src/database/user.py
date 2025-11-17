@@ -1,8 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
-from backend.experiments.auth.models.user import User
-from backend.experiments.auth.schemas.user import UserCreate
-from backend.experiments.auth.core.interface import IUserRepository
+from database.models import User
+from api.schemas import UserCreate
+from core.interface import IUserRepository
 import uuid
 from typing import Optional
 
@@ -43,6 +43,7 @@ class UserRepository(IUserRepository):
             sso_id=user_data.sso_id,
             first_name=user_data.first_name,
             last_name=user_data.last_name,
+            avatar_url=user_data.avatar_url,
         )
         self.db.add(user)
         await self.db.commit()

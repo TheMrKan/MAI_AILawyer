@@ -61,17 +61,17 @@ def inject_global(func):
 async def build_async() -> Provider:
     provider = Provider()
 
-    from src.core.llm import LLMABC
-    from src.external.cerebras_llm import CerebrasLLM
+    from core.llm import LLMABC
+    from external.cerebras_llm import CerebrasLLM
     provider.register_singleton(LLMABC, CerebrasLLM())
 
-    from src.core.graph_controller import GraphController
+    from core.graph_controller import GraphController
     from langgraph.checkpoint.memory import InMemorySaver
     checkpointer = InMemorySaver()
     provider.register_singleton(GraphController, GraphController(checkpointer))
 
-    from src.core.laws import LawDocsRepositoryABC
-    from src.external.chroma_law_docs_repo import ChromaLawDocsRepository
+    from core.laws import LawDocsRepositoryABC
+    from external.chroma_law_docs_repo import ChromaLawDocsRepository
     chroma_repo = ChromaLawDocsRepository("chroma", 8000)
     await chroma_repo.init_async()
     provider.register_singleton(LawDocsRepositoryABC, chroma_repo)

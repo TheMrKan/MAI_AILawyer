@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
-from auth.config import settings
-from auth.schemas.user import Token, UserResponse, TokenData
-from auth.core.interface import IAuthService
+from config import settings
+from api.schemas import Token, UserResponse, TokenData
+from core.interface import IAuthService
 from typing import Optional
 
 class AuthService(IAuthService):

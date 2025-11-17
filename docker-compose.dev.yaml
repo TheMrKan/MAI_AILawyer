@@ -12,6 +12,19 @@ services:
       - "./backend/src:/app/src"
       - "./backend/models/onnx_models:/root/.cache/chroma/onnx_models"
     restart: no
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: sso_auth
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   chroma:
     image: chromadb/chroma
@@ -24,3 +37,4 @@ services:
 
 volumes:
   chroma-data:
+  postgres_data:

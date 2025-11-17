@@ -2,8 +2,8 @@ import logging
 
 import chromadb
 
-from src.core.laws import LawDocsRepositoryABC
-from src.dto.laws import LawFragment
+from core.laws import LawDocsRepositoryABC
+from dto.laws import LawFragment
 
 
 class ChromaLawDocsRepository(LawDocsRepositoryABC):

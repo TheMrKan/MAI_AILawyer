@@ -1,8 +1,8 @@
 from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from backend.experiments.auth.services.auth import auth_service
-from backend.experiments.auth.repositories.user import UserRepository
-from backend.experiments.auth.database.connection import get_db
+from core.auth import auth_service
+from database.user import UserRepository
+from database.connection import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 import logging

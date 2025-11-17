@@ -3,12 +3,12 @@ import logging
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
 
-from src.core import llm_use_cases
-from src.core.laws import LawDocsRepositoryABC
-from src.core.llm import LLMABC
-from src.dto.laws import LawFragment
-from src.dto.messages import ChatMessage
-from src.application.provider import inject_global
+from core import llm_use_cases
+from core.laws import LawDocsRepositoryABC
+from core.llm import LLMABC
+from dto.laws import LawFragment
+from dto.messages import ChatMessage
+from application.provider import inject_global
 
 
 logger = logging.getLogger(__name__)

@@ -2,9 +2,9 @@ import json
 from pydantic import BaseModel
 from dataclasses import dataclass
 
-from src.core.llm import LLMABC
-from src.dto.messages import ChatMessage
-from src.dto.laws import LawFragment
+from core.llm import LLMABC
+from dto.messages import ChatMessage
+from dto.laws import LawFragment
 
 
 @dataclass

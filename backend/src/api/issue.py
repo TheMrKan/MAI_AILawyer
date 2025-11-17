@@ -4,9 +4,9 @@ from enum import Enum
 from typing import Self, Annotated
 import logging
 
-from src.core.graph_controller import GraphController, GraphError
-from src.application.provider import Provider
-from src.dto.messages import ChatMessage, MessageRole as DtoMessageRole
+from core.graph_controller import GraphController, GraphError
+from application.provider import Provider
+from dto.messages import ChatMessage, MessageRole as DtoMessageRole
 
 
 logger = logging.getLogger(__name__)

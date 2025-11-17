@@ -1,6 +1,6 @@
 import httpx
-from auth.schemas.user import UserCreate
-from auth.config import settings
+from api.schemas import UserCreate
+from config import settings
 
 class GoogleOAuth:
     def __init__(self):

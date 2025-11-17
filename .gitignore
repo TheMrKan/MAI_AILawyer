@@ -1,2 +1,16 @@
 artifacts/
 /.idea/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.env/
+.env

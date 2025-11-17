@@ -2,8 +2,8 @@ from langgraph.checkpoint.memory import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command, StateSnapshot
 
-from src.core.issue_graph import IssueGraph, InputState
-from src.dto.messages import ChatMessage
+from core.issue_graph import IssueGraph, InputState
+from dto.messages import ChatMessage
 
 
 class GraphError(Exception):

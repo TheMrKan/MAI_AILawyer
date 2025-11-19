@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
-from config import settings
-from api.schemas import Token, UserResponse, TokenData
-from core.interface import IAuthService
 from typing import Optional
+
+from src.config import settings
+from src.api.schemas import Token, UserResponse, TokenData
+from src.core.interface import IAuthService
+
 
 class AuthService(IAuthService):
     def __init__(self):

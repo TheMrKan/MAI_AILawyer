@@ -1,12 +1,12 @@
 import json
 from pydantic import BaseModel
 from dataclasses import dataclass
-from collections import namedtuple
 from typing import NamedTuple
 
-from core.llm import LLMABC
-from dto.messages import ChatMessage
-from dto.laws import LawFragment
+from src.core.llm import LLMABC
+from src.dto.messages import ChatMessage
+from src.dto.laws import LawFragment
+from src.core.templates.types import Template
 
 
 @dataclass
@@ -40,7 +40,7 @@ __ACTS_ANALYSIS_MESSAGE = ChatMessage.from_system("""
 Если помочь пользователю не получится, то так и скажи или предложи переформулировать проблему.
 Если помощь возможна, то спроси у пользователя подтверждение на продолжение. 
 Уточни, что сможешь поискать шаблоны обращение в своей базе и помочь с заполнением. ОБЯЗАТЕЛЬНО ВЕРНИ "can_help": 1, если это так.
-Дай ответ строго в формате JSON без лишних символов по примеру.
+Дай ответ строго в формате JSON без лишних символов по примеру без какого либо форматирования. Чистый JSON файл.
 Поля: 
 "can_help" - 0, если нарушения нет или помочь сложно. 1 - есть нарушение прав.
 "resume_for_user" - текстовый ответ для пользователя
@@ -77,6 +77,7 @@ __CHECK_AGREEMENT_MESSAGE = ChatMessage.from_system("""
 0
 """)
 
+
 async def is_agreement_async(llm: LLMABC, message: ChatMessage) -> bool:
     ai_response = await llm.invoke_async(weak_model=True, messages=[__CHECK_AGREEMENT_MESSAGE, message])
     return "1" in ai_response.text
@@ -85,7 +86,7 @@ async def is_agreement_async(llm: LLMABC, message: ChatMessage) -> bool:
 __TEMPLATES_ANALYSIS_MESSAGE = ChatMessage.from_system("""
 Выше даны тексты шаблонов документов для анализа. 
 Твоя задача - определить, какой шаблон обращение больше всего подходит к описанной ситуации.
-Если считаешь, что ни один шаблон не подходит, то нужно это явно обозначить. Сообщи пользователю, что не нашел подходящего шаблона в базе и что не можешь помочь.
+Если считаешь, что ни один шаблон не подходит, то нужно это явно обозначить. Сообщи пользователю, что не нашел подходящего шаблона и можешь составить обращение в свободной форме.
 Не упоминай шаблоны, которые не подходят к данной ситуации.
 Также дай краткое описание шаблона для пользователя и спроси, устраивает ли его этот шаблон и хочет ли он продолжить работу.
 Текст для пользователя может выглядить подобным образом: "Я нашел подходящий шаблон в своей базе: <описание шаблона>"
@@ -101,6 +102,7 @@ __TEMPLATES_ANALYSIS_MESSAGE = ChatMessage.from_system("""
 class __TemplatesAnalysisLLMResponseSchema(BaseModel):
     relevant_template_index: int
     user_message: str
+
 
 class TemplatesAnalysisResult(NamedTuple):
     relevant_template_index: int | None
@@ -122,3 +124,44 @@ async def analyze_templates_async(llm: LLMABC,
 
     index = validated.relevant_template_index if validated.relevant_template_index >= 0 else None
     return TemplatesAnalysisResult(index, ChatMessage.from_ai(validated.user_message))
+
+
+__FREE_TEMPLATE_SETUP_TEXT = """
+Теперь ты должен оставить обращение в свободной форме. Выше дан текст шаблона. У обращения есть несколько обязательных полей, которые тебе нужно заполнить. Ты должен самостоятельно решить, что писать в поля, если это возможно:
+{fields}
+В поле с основным содержимым ты должен вписать текст обращения.
+Задавай пользователю вопросы до тех пор, пока информации не будет достаточно для составления текста. Веди с ним диалог.
+Представь, что пользователь вообще ничего не понимает в праве. Твоя задача самому определить, как и куда подавать жалобу/обращение, а у пользователя спрашивать только факты.
+Пользователь не должен принимать решения. Ты должен максимально разгрузить его.
+Если нужны персональные данные пользователя, такие как ФИО, телефон и т. д., поставь нижние подчеркивания (________) нужной длинны, чтобы пользователь сам вписал их позже.
+Тебе нельзя узнавать личные данные пользователя.
+ВСЕ ДАЛЬНЕЙШИЕ ОТВЕТЫ ДОЛЖНЫ БЫТЬ СТРОГО В JSON ФОРМАТЕ КАК НИЖЕ.
+"user_message" - это текст вопроса, который нужно задать пользователю.
+"is_ready" - bool флаг, показывающий, достаточно ли сейчас информации. Когда информации будет достаточно, верни "is_ready" = true. Тогда "user_message" оставь пустым.
+{{
+    "user_message": "Вопрос пользователю?",
+    "is_ready": false
+}}
+"""
+
+
+def setup_free_template_loop(free_template: Template, free_template_text: str) -> list[ChatMessage]:
+    rendered_fields = "\n".join(f"{f.key} - {f.agent_instructions}" for f in free_template.fields.values())
+    return [
+        ChatMessage.from_system(free_template_text),
+        ChatMessage.from_system(__FREE_TEMPLATE_SETUP_TEXT.format(fields=rendered_fields))
+    ]
+
+
+class __LoopIterationLLMResponseSchema(BaseModel):
+    user_message: str
+    is_ready: bool
+
+
+async def loop_iteration_async(llm: LLMABC, chat_history: list[ChatMessage]) -> tuple[bool, ChatMessage | None]:
+    response = await llm.invoke_async(messages=chat_history)
+    # даст исключение, если формат не соблюден
+    parsed = json.loads(response.text)
+    validated = __LoopIterationLLMResponseSchema(**parsed)
+
+    return validated.is_ready, None if validated.is_ready else ChatMessage.from_ai(validated.user_message)

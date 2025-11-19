@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from dto.laws import LawFragment
+from src.dto.laws import LawFragment
 
 
 class LawDocsRepositoryABC(ABC):

@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import settings
-from database.connection import get_db
-from external.google_oauth import google_oauth
-from core.auth import auth_service
-from core.state_service import state_service
-from database.user import UserRepository
-from api.deps import get_current_user
+from src.config import settings
+from src.database.connection import get_db
+from src.external.google_oauth import google_oauth
+from src.core.auth import auth_service
+from src.core.state_service import state_service
+from src.database.user import UserRepository
+from src.api.deps import get_current_user
 import logging
 
 logger = logging.getLogger(__name__)

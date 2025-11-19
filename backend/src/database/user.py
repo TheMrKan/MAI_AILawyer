@@ -1,10 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
-from database.models import User
-from api.schemas import UserCreate
-from core.interface import IUserRepository
 import uuid
 from typing import Optional
+
+from src.database.models import User
+from src.api.schemas import UserCreate
+from src.core.interface import IUserRepository
 
 
 class UserRepository(IUserRepository):

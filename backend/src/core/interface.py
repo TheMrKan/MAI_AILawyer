@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Dict
-from api.schemas import UserCreate
+
+from src.api.schemas import UserCreate
 
 
 class IOAuthProvider(ABC):

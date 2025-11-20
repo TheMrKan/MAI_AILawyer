@@ -5,6 +5,7 @@ import logging
 from src.core.chat_graph.common import BaseState, FreeTemplateState
 from src.core.templates.service import TemplateService
 from src.core.templates.file_service import TemplateFileService
+from src.core.results.iface import IssueResultFileStorageABC
 from src.core import llm_use_cases
 from src.core.llm import LLMABC
 from src.dto.messages import ChatMessage
@@ -35,6 +36,9 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
         self.add_edge("get_user_answer", "invoke_llm"),
 
         self.add_node("prepare_field_values", self.__prepare_field_values)
+        self.add_edge("prepare_field_values", "generate_document")
+
+        self.add_node("generate_document", self.__generate_document)
 
     @inject_global
     async def __setup_loop(self,
@@ -71,3 +75,16 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
         self.__logger.debug("Prepared field values: %s", values)
 
         return {"field_values": values}
+
+    @inject_global
+    async def __generate_document(self,
+                                  state: FreeTemplateState,
+                                  file_service: TemplateFileService,
+                                  result_storage: IssueResultFileStorageABC) -> FreeTemplateState:
+        self.__logger.debug("Generating document...")
+
+        with result_storage.write_issue_result_file("123") as result_file:
+            file_service.fill_with_values(state["relevant_template"], state["field_values"], result_file)
+
+        self.__logger.debug("Document generated")
+        return {"messages": [ChatMessage.from_ai("Ваш документ готов!\nСпасибо, что воспользовались нашим сервисом!")]}

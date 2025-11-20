@@ -46,7 +46,7 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
         free_template = await service.get_free_template_async()
         text = file_service.extract_text(free_template)
 
-        return {"messages": llm_use_cases.setup_free_template_loop(free_template, text)}
+        return {"messages": llm_use_cases.setup_free_template_loop(free_template, text), "relevant_template": free_template}
 
     @inject_global
     async def __invoke_llm(self, state: FreeTemplateState, llm: LLMABC) -> FreeTemplateState:

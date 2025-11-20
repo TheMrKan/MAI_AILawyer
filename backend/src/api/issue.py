@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 from enum import Enum
 from typing import Self, Annotated
 import logging
@@ -7,11 +9,15 @@ import logging
 from src.core.issue_chat_service import IssueChatService, GraphError
 from src.application.provider import Provider
 from src.dto.messages import ChatMessage, MessageRole as DtoMessageRole
+from src.database.models import Issue
+from src.database.connection import get_db
+from src.api.deps import get_current_user
+from src.core.results.iface import IssueResultFileStorageABC
 
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/issue/{issue_id}")
+router = APIRouter(prefix="/issue")
 
 
 class AddUserMessageSchema(BaseModel):
@@ -41,10 +47,82 @@ class ChatUpdateSchema(BaseModel):
 def __should_message_be_returned(dto: ChatMessage) -> bool:
     return dto.role in (DtoMessageRole.USER, DtoMessageRole.AI)
 
+class IssueCreateSchema(BaseModel):
+    text: str
 
-@router.post('/chat/')
-async def chat(issue_id: int, message: AddUserMessageSchema,
-               provider: Annotated[Provider, Depends(Provider)]) -> ChatUpdateSchema:
+
+@router.get('/{issue_id}/')
+async def get_issue_messages(
+        issue_id: int,
+        provider: Annotated[Provider, Depends(Provider)],
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(get_current_user)
+
+):
+    try:
+        issue = await db.get(Issue, issue_id)
+        if not issue:
+            raise HTTPException(status_code=404, detail="Issue not found")
+
+        if issue.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        chat_service = provider[IssueChatService]
+        dto_messages = await chat_service.get_messages_async(issue_id)
+
+        new_messages = [
+            MessageSchema.from_dto(message)
+            for message in dto_messages
+            if __should_message_be_returned(message)
+        ]
+
+        is_ended = await chat_service.is_ended(issue_id)
+
+        return ChatUpdateSchema(new_messages=new_messages, is_ended=is_ended)
+
+    except Exception as e:
+        logger.exception("Error getting issue messages", exc_info=e)
+        raise HTTPException(status_code=500, detail="Failed to get messages")
+
+@router.post('/create')
+async def create_issue(
+        issue_data: IssueCreateSchema,
+        provider: Annotated[Provider, Depends(Provider)],
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(get_current_user)
+
+):
+    try:
+        new_issue = Issue(
+            text=issue_data.text,
+            user_id=current_user.id
+        )
+        db.add(new_issue)
+        await db.commit()
+        await db.refresh(new_issue)
+        logger.info(f"New issue created: {new_issue.text}")
+
+        chat_service = provider[IssueChatService]
+        await chat_service.process_new_user_message(new_issue.id, issue_data.text)
+        logger.info(f"Graph started for issue {new_issue.id}")
+
+    except Exception as e:
+        await db.rollback()
+        logger.exception(f"Failed to create issue: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create issue")
+
+    created_at = new_issue.created_at.strftime("%Y-%m-%d %H:%M:%S")
+
+    return {
+        "issue_id": {"id": str(new_issue.id)},
+        "created_at": created_at
+    }
+
+@router.post('/chat/{issue_id}/')
+async def chat(issue_id: int,
+               message: AddUserMessageSchema,
+               provider: Annotated[Provider, Depends(Provider)]
+) -> ChatUpdateSchema:
     try:
         chat_service = provider[IssueChatService]
         dto_messages = await chat_service.process_new_user_message(issue_id, message.text)

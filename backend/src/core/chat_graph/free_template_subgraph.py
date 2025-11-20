@@ -29,10 +29,12 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
         self.add_node("invoke_llm", self.__invoke_llm)
         self.add_conditional_edges("invoke_llm", lambda state: state.get("loop_completed", False), {
             False: "get_user_answer",
-            True: END
+            True: "prepare_field_values"
         })
         self.add_node("get_user_answer", self.__handle_answer)
         self.add_edge("get_user_answer", "invoke_llm"),
+
+        self.add_node("prepare_field_values", self.__prepare_field_values)
 
     @inject_global
     async def __setup_loop(self,
@@ -61,3 +63,11 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
         self.__logger.debug("Got user answer: %s", user_input)
 
         return {"messages": [user_message]}
+
+    @inject_global
+    async def __prepare_field_values(self, state: FreeTemplateState, llm: LLMABC) -> FreeTemplateState:
+        self.__logger.debug("Preparing field values...")
+        values = await llm_use_cases.prepare_free_template_values_async(llm, state["messages"], state["relevant_template"])
+        self.__logger.debug("Prepared field values: %s", values)
+
+        return {"field_values": values}

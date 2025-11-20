@@ -87,6 +87,7 @@ __TEMPLATES_ANALYSIS_MESSAGE = ChatMessage.from_system("""
 Выше даны тексты шаблонов документов для анализа. 
 Твоя задача - определить, какой шаблон обращение больше всего подходит к описанной ситуации.
 Если считаешь, что ни один шаблон не подходит, то нужно это явно обозначить. Сообщи пользователю, что не нашел подходящего шаблона и можешь составить обращение в свободной форме.
+Тчательно проверь, что шаблон обращения подходит именно под эту проблему. Ни в коем случае не выбирай шаблон, который относится не к этой проблеме.
 Не упоминай шаблоны, которые не подходят к данной ситуации.
 Также дай краткое описание шаблона для пользователя и спроси, устраивает ли его этот шаблон и хочет ли он продолжить работу.
 Текст для пользователя может выглядить подобным образом: "Я нашел подходящий шаблон в своей базе: <описание шаблона>"
@@ -165,3 +166,25 @@ async def loop_iteration_async(llm: LLMABC, chat_history: list[ChatMessage]) -> 
     validated = __LoopIterationLLMResponseSchema(**parsed)
 
     return validated.is_ready, None if validated.is_ready else ChatMessage.from_ai(validated.user_message)
+
+
+__FREE_TEMPLATE_PREPARE_VALUES_TEXT = """
+Ты посчитал, что информации достаточно. Теперь определи значения всех полей. Главное составь основной текст обращения.
+Не забывай, что там, где пользователь должен вписать свои перс. данные (ФИО, адрес, номер телефона, email) должны быть прочерки (____) чтобы пользователь заполнил их сам.
+Ответ дай строго в формате JSON без лишнего текста. Содержимое: "название поля": "значение". В примере еще раз даны все поля и краткие пояснения к ним.
+{{
+**fields
+}}
+"""
+
+
+async def prepare_free_template_values_async(llm: LLMABC, chat_history: list[ChatMessage], template: Template) -> dict[str, str]:
+    rendered_fields = "\n".join(f'"{f.key}": "{f.agent_instructions}"' for f in template.fields.values())
+    prompt = [
+        *chat_history,
+        ChatMessage.from_system(__FREE_TEMPLATE_PREPARE_VALUES_TEXT.format(fields=rendered_fields))
+    ]
+    response = await llm.invoke_async(messages=prompt)
+
+    parsed = json.loads(response.text)
+    return parsed

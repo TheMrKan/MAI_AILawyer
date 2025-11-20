@@ -30,6 +30,7 @@ class BaseState(InputState, total=False):
     templates: list[Template]
     relevant_template: Template | None
     template_confirmed: bool
+    field_values: dict[str, str]
 
 
 class FreeTemplateState(BaseState, total=False):

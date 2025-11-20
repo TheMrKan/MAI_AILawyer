@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from enum import Enum
@@ -11,6 +12,7 @@ from src.dto.messages import ChatMessage, MessageRole as DtoMessageRole
 from src.database.models import Issue
 from src.database.connection import get_db
 from src.api.deps import get_current_user
+from src.core.results.iface import IssueResultFileStorageABC
 
 logger = logging.getLogger(__name__)
 
@@ -47,33 +49,6 @@ def __should_message_be_returned(dto: ChatMessage) -> bool:
 class IssueCreateSchema(BaseModel):
     text: str
 
-
-@router.post('/create')
-async def create_issue(
-        issue_data: IssueCreateSchema,
-        db: AsyncSession = Depends(get_db),
-        current_user=Depends(get_current_user)
-):
-    try:
-        new_issue = Issue(
-            text=issue_data.text,
-            user_id=current_user.id
-        )
-        db.add(new_issue)
-        await db.commit()
-        await db.refresh(new_issue)
-        logger.info(f"New issue created: {new_issue.text}")
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(status_code=500, detail="Failed to create issue")
-
-    created_at = new_issue.created_at.strftime("%Y-%m-%d %H:%M:%S")
-
-    return {
-        "issue_id": {"id": str(new_issue.id)},
-        "created_at": created_at
-    }
-
 @router.post('/chat/{issue_id}/')
 async def chat(issue_id: int, message: AddUserMessageSchema,
                provider: Annotated[Provider, Depends(Provider)]) -> ChatUpdateSchema:
@@ -90,3 +65,38 @@ async def chat(issue_id: int, message: AddUserMessageSchema,
         raise HTTPException(status_code=500, detail="Произошла непредвиденная ошибка")
 
     return ChatUpdateSchema(new_messages=new_messages, is_ended=is_ended)
+
+
+@router.get('/{issue_id}/download/')
+async def download_issue_file(
+        issue_id: int,
+        provider: Annotated[Provider, Depends(Provider)],
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(get_current_user)
+):
+    try:
+        storage = provider[IssueResultFileStorageABC]
+
+        issue = await db.get(Issue, issue_id)
+        if not issue:
+            raise HTTPException(status_code=404, detail="Issue not found")
+
+        if issue.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        with storage.read_issue_result_file(str(issue_id)) as file:
+            file_content = file.read()
+
+        return StreamingResponse(
+            iter([file_content]),
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                "Content-Disposition": f"attachment; filename=issue_{issue_id}_result.docx"
+            }
+        )
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found for this issue")
+    except Exception as e:
+        logger.exception("Error downloading issue file", exc_info=e)
+        raise HTTPException(status_code=500, detail="Failed to download file")

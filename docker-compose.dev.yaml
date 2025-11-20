@@ -7,6 +7,7 @@ services:
       - ./backend/.env
     environment:
       - "TEMPLATES_DIR=/app/templates"
+      - "RESULTS_DIR=/app/results"
     ports:
       - "8000:8000"
     volumes:
@@ -14,6 +15,7 @@ services:
       - "./backend/experiments:/app/experiments"
       - "./backend/models/onnx_models:/root/.cache/chroma/onnx_models"
       - "./backend/templates:/app/templates"
+      - "./backend/results:/app/results"
     restart: no
     depends_on:
       - chroma

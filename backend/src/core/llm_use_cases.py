@@ -9,31 +9,55 @@ from src.dto.laws import LawFragment
 from src.core.templates.types import Template
 
 
-@dataclass
-class ActsAnalysisResult:
-    can_help: bool
-    messages: list[ChatMessage]
-
-
-class __ActsAnalysisLLMResponseSchema(BaseModel):
-    can_help: bool
-    resume_for_user: str
-
-
-__FIRST_SYSTEM_MESSAGE = ChatMessage.from_system(
-    "Ты помогаешь пользователю составить юридически грамотную жалобу или обращение. "
-    "Далее пользователь описывает проблему. "
-    "Не нужно рассказывать о себе и говорить, какова твоя задача. Сразу переходи к сути.")
+__FIRST_SYSTEM_MESSAGE = ChatMessage.from_system("""
+Ты помогаешь пользователю составить юридически грамотную жалобу или обращение.
+Не нужно рассказывать о себе и говорить, какова твоя задача. Сразу переходи к сути.
+Далее пользователь описывает проблему. Тебе нужно решить, достаточно ли информаци для того, чтобы перейти к поиску правовых актов.
+Если информации недостаточно, то задай уточняющий вопрос.
+Пока не принимай решения о том, можно ли помочь пользователю.
+Это решение ты должен будешь принять на следующем этапе после поиска подходящих правовых актов.
+Если считаешь, что нарушения скорее всего нет, то сразу переходи к поиску актов.
+Дай ответ строго в формате JSON без лишних символов по примеру без какого либо форматирования. Чистый JSON файл.
+Поля:
+"is_ready" - 0, пока информации недостаточно. 1 - можно переходить на следующий этап поиска правовых актов.
+"user_message" - уточняющий вопрос для пользователя, если информации недостаточно. Оставь пустым, если переходим к следующему этапу.
+{
+"is_ready": 0,
+"user_message": "Уточняющий вопрос?"
+}
+""")
 
 
 def get_start_system_message():
     return __FIRST_SYSTEM_MESSAGE
 
 
+class __InfoAnalysisLLMResponseSchema(BaseModel):
+    is_ready: bool
+    user_message: str
+
+
+class InfoAnalysisResult(NamedTuple):
+    is_ready_to_continue: bool
+    user_message: str
+
+
+async def analyze_first_info_async(llm: LLMABC,
+                                   chat_history: list[ChatMessage]) -> InfoAnalysisResult:
+
+    ai_response = await llm.invoke_async(messages=chat_history)
+    # даст исключение, если формат не соблюден
+    parsed = json.loads(ai_response.text)
+    validated = __InfoAnalysisLLMResponseSchema(**parsed)
+
+    return InfoAnalysisResult(validated.is_ready, validated.user_message)
+
+
 __ACTS_MESSAGE_TEMPLATE = "Вот такие правовые акты я нашел в своей базе: {acts}"
 
 
 __ACTS_ANALYSIS_MESSAGE = ChatMessage.from_system("""
+Забудь предыдущие инструкции по формату вывода и следуй новым.
 Пиши так, будто акты нашел ты. Проанализируй их и дай очень краткое резюме ситуации.
 Сделай короткое заключение, можно ли помочь пользователю. Не давай инструкций, что ему делать.
 Оценивай строго, можно ли помочь пользователю в данной ситуации.
@@ -51,6 +75,16 @@ __ACTS_ANALYSIS_MESSAGE = ChatMessage.from_system("""
 """)
 
 
+@dataclass
+class ActsAnalysisResult:
+    can_help: bool
+    messages: list[ChatMessage]
+
+
+class __ActsAnalysisLLMResponseSchema(BaseModel):
+    can_help: bool
+    resume_for_user: str
+
 
 async def analyze_acts_async(llm: LLMABC,
                              chat_history: list[ChatMessage],
@@ -58,7 +92,7 @@ async def analyze_acts_async(llm: LLMABC,
     joined_acts = "\n\n".join([a.content for a in law_docs])
     documents_message = ChatMessage.from_ai(__ACTS_MESSAGE_TEMPLATE.format(acts=joined_acts))
 
-    prompt = [documents_message, __ACTS_ANALYSIS_MESSAGE, *chat_history]
+    prompt = [*chat_history, documents_message, __ACTS_ANALYSIS_MESSAGE]
     ai_response = await llm.invoke_async(messages=prompt)
 
     # даст исключение, если формат не соблюден
@@ -86,7 +120,9 @@ async def is_agreement_async(llm: LLMABC, message: ChatMessage) -> bool:
 __TEMPLATES_ANALYSIS_MESSAGE = ChatMessage.from_system("""
 Выше даны тексты шаблонов документов для анализа. 
 Твоя задача - определить, какой шаблон обращение больше всего подходит к описанной ситуации.
+Обращение обязательно должно быть подано в государственные органы. Не допускается написание обращения работодателю.
 Если считаешь, что ни один шаблон не подходит, то нужно это явно обозначить. Сообщи пользователю, что не нашел подходящего шаблона и можешь составить обращение в свободной форме.
+Тщательно проверь, что шаблон обращения подходит именно под эту проблему. Ни в коем случае не выбирай шаблон, который относится не к этой проблеме.
 Не упоминай шаблоны, которые не подходят к данной ситуации.
 Также дай краткое описание шаблона для пользователя и спроси, устраивает ли его этот шаблон и хочет ли он продолжить работу.
 Текст для пользователя может выглядить подобным образом: "Я нашел подходящий шаблон в своей базе: <описание шаблона>"
@@ -133,9 +169,10 @@ __FREE_TEMPLATE_SETUP_TEXT = """
 Задавай пользователю вопросы до тех пор, пока информации не будет достаточно для составления текста. Веди с ним диалог.
 Представь, что пользователь вообще ничего не понимает в праве. Твоя задача самому определить, как и куда подавать жалобу/обращение, а у пользователя спрашивать только факты.
 Пользователь не должен принимать решения. Ты должен максимально разгрузить его.
-Если нужны персональные данные пользователя, такие как ФИО, телефон и т. д., поставь нижние подчеркивания (________) нужной длинны, чтобы пользователь сам вписал их позже.
+Не запрашивай персональные данные пользователя, такие как ФИО, email, номер телефона.
 Тебе нельзя узнавать личные данные пользователя.
 ВСЕ ДАЛЬНЕЙШИЕ ОТВЕТЫ ДОЛЖНЫ БЫТЬ СТРОГО В JSON ФОРМАТЕ КАК НИЖЕ.
+Не прекращай использовать этот шаблон до тех пор, пока не вернешь "is_ready" = true. Только со следующего сообщения можно отвечать другим шаблоном.
 "user_message" - это текст вопроса, который нужно задать пользователю.
 "is_ready" - bool флаг, показывающий, достаточно ли сейчас информации. Когда информации будет достаточно, верни "is_ready" = true. Тогда "user_message" оставь пустым.
 {{
@@ -159,9 +196,37 @@ class __LoopIterationLLMResponseSchema(BaseModel):
 
 
 async def loop_iteration_async(llm: LLMABC, chat_history: list[ChatMessage]) -> tuple[bool, ChatMessage | None]:
-    response = await llm.invoke_async(messages=chat_history)
+    prompt = [
+        *chat_history,
+        ChatMessage.from_system('Ответ должен быть строго в формате JSON как описано выше. {{"user_message": "Вопрос пользователю?", "is_ready": false}}')
+    ]
+    response = await llm.invoke_async(messages=prompt)
     # даст исключение, если формат не соблюден
     parsed = json.loads(response.text)
     validated = __LoopIterationLLMResponseSchema(**parsed)
 
     return validated.is_ready, None if validated.is_ready else ChatMessage.from_ai(validated.user_message)
+
+
+__FREE_TEMPLATE_PREPARE_VALUES_TEXT = """
+Прекращай возвращать структуру с "user_message" и "is_ready". Возвращай только новую структуру.
+Ты посчитал, что информации достаточно. Теперь определи значения всех полей. Главное составь основной текст обращения.
+Не забывай, что там, где пользователь должен вписать свои перс. данные (ФИО, адрес, номер телефона, email) должны быть прочерки (____) чтобы пользователь заполнил их сам.
+Всё, кроме прес. данных, ты должен заполнить сам.
+Ответ дай строго в формате JSON без лишнего текста. Содержимое: "название поля": "значение". В примере еще раз даны все поля и краткие пояснения к ним.
+{{
+{fields}
+}}
+"""
+
+
+async def prepare_free_template_values_async(llm: LLMABC, chat_history: list[ChatMessage], template: Template) -> dict[str, str]:
+    rendered_fields = "\n".join(f'"{f.key}": "{f.agent_instructions}"' for f in template.fields.values())
+    prompt = [
+        *chat_history,
+        ChatMessage.from_system(__FREE_TEMPLATE_PREPARE_VALUES_TEXT.format(fields=rendered_fields))
+    ]
+    response = await llm.invoke_async(messages=prompt)
+
+    parsed = json.loads(response.text)
+    return parsed

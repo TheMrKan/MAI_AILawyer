@@ -24,12 +24,14 @@ class InputState(TypedDict, total=False):
 class BaseState(InputState, total=False):
     # Annotated и add_messages обеспечивает добавление новых сообщений в конец списка, вместо перезаписи всего списка
     messages: Annotated[list[ChatMessage], _add_messages_to_state]
+    first_info_completed: bool
     law_docs: list[LawFragment]
     can_help: bool
     laws_confirmed: bool
     templates: list[Template]
     relevant_template: Template | None
     template_confirmed: bool
+    field_values: dict[str, str]
 
 
 class FreeTemplateState(BaseState, total=False):

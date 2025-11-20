@@ -29,6 +29,15 @@ class IssueChatService:
         compiled = graph.compile(checkpointer=checkpointer)
         return compiled
 
+    async def get_messages_async(self, issue_id: int) -> list[ChatMessage]:
+        graph_config = {"configurable": {"thread_id": issue_id}}
+        graph_state = await self.graph.aget_state(graph_config, subgraphs=True)
+
+        if not self.__is_exists(graph_state):
+            raise KeyError("Чат не существует")
+
+        return self.__get_chat_history(graph_state)
+
     async def process_new_user_message(self, issue_id: int, message_text: str) -> list[ChatMessage]:
         graph_config = {"configurable": {"thread_id": issue_id}}
         graph_state = await self.graph.aget_state(graph_config, subgraphs=True)
@@ -41,10 +50,7 @@ class IssueChatService:
             raise GraphError("Чат завершен")
         else:
             graph_input = Command(resume=message_text)
-            if any(graph_state.tasks):
-                history = graph_state.tasks[0].state.values.get("messages", [])
-            else:
-                history = graph_state.values.get("messages", [])
+            history = self.__get_chat_history(graph_state)
             skip_messages = len(history)
 
         result = await self.graph.ainvoke(graph_input, graph_config, subgraphs=True)
@@ -54,6 +60,15 @@ class IssueChatService:
         graph_config = {"configurable": {"thread_id": issue_id}}
         graph_state = await self.graph.aget_state(graph_config)
         return self.__is_ended(graph_state)
+
+    @staticmethod
+    def __get_chat_history(graph_state: StateSnapshot) -> list[ChatMessage]:
+        history = graph_state.values.get("messages", [])
+        if any(graph_state.tasks):
+            if len(graph_state.tasks[0].state.values.get("messages", [])) > len(history):
+                history = graph_state.tasks[0].state.values.get("messages", [])
+
+        return history
 
     @staticmethod
     def __is_exists(graph_state: StateSnapshot) -> bool:

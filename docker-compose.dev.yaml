@@ -1,22 +1,4 @@
 services:
-  frontend:
-    build:
-      context: ./frontend
-      target: development
-    container_name: frontend
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      VITE_API_URL: http://backend:8000
-    depends_on:
-      - backend
-    restart: unless-stopped
-    networks:
-      - dev-network
-
   backend:
     build:
       context: ./backend
@@ -35,8 +17,24 @@ services:
     restart: no
     depends_on:
       - chroma
-    networks:
-      - dev-network
+
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    ports:
+      - "5173:5173"
+    volumes:
+      - "./frontend:/app"
+      - "/app/node_modules"
+    environment:
+      - TEMPLATES_DIR=/app/templates
+      - CEREBRAS_API_KEY=csk...
+      - VITE_API_URL=http://localhost:8000/
+
+    depends_on:
+      - backend
+    restart: no
 
   chroma:
     image: chromadb/chroma
@@ -46,11 +44,7 @@ services:
       - "8000"
     ports:
       - "8004:8000"
-    networks:
-      - dev-network
 
 volumes:
   chroma-data:
-networks:
-  dev-network:
-    driver: bridge
+  node_modules:

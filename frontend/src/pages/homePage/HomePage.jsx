@@ -78,34 +78,17 @@ const HomePage = () => {
           <div className="hero-content">
             <div className="hero-text">
               <h1 className="hero-title">
-                Создайте юридически грамотную жалобу за минуты
+                Создайте юридически грамотное обращение за минуты
               </h1>
               <p className="hero-subtitle">
                 AI-помощник анализирует вашу проблему и генерирует готовые документы 
                 для обращения в государственные органы и организации
               </p>
               
-              <div className="hero-stats">
-                <div className="stat">
-                  <div className="stat-number">500+</div>
-                  <div className="stat-label">успешных обращений</div>
-                </div>
-                <div className="stat">
-                  <div className="stat-number">98%</div>
-                  <div className="stat-label">положительных решений</div>
-                </div>
-                <div className="stat">
-                  <div className="stat-number">24/7</div>
-                  <div className="stat-label">доступность</div>
-                </div>
-              </div>
+              
             </div>
             
             <div className="hero-visual">
-              <div className="floating-card card-1">
-                <div className="card-icon">⚖️</div>
-                <p>Жалобы в Роспотребнадзор</p>
-              </div>
               <div className="floating-card card-2">
                 <div className="card-icon">🏛️</div>
                 <p>Исковые заявления</p>
@@ -135,7 +118,7 @@ const HomePage = () => {
                   id="problem-description"
                   value={problemDescription}
                   onChange={(e) => setProblemDescription(e.target.value)}
-                  placeholder="Например: 'Мне не возвращают деньги за некачественный товар, купленный две недели назад. Магазин отказывается принимать претензию, ссылаясь на то, что товар был в использовании...'"
+                  placeholder="Например: 'Меня принуждают к переработкам без соответствующей компенсации, какую жалобу написать на начальника????'"
                   className="problem-textarea"
                   rows="8"
                   disabled={isLoading}
@@ -167,30 +150,7 @@ const HomePage = () => {
               </Button>
             </form>
 
-            {/* Quick Examples */}
-            <div className="quick-examples">
-              <h3>Примеры типичных ситуаций:</h3>
-              <div className="examples-grid">
-                {quickExamples.map((example, index) => (
-                  <div 
-                    key={index}
-                    className="example-card"
-                    onClick={() => handleQuickStart(example.example)}
-                  >
-                    <div className="example-icon">
-                      {example.title === 'Возврат товара' && '🛍️'}
-                      {example.title === 'Некачественные услуги' && '🔧'}
-                      {example.title === 'Проблемы с ЖКХ' && '🏠'}
-                    </div>
-                    <h4>{example.title}</h4>
-                    <p>{example.description}</p>
-                    <Button variant="text" size="small">
-                      Использовать пример →
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            
           </div>
         </section>
 
@@ -213,26 +173,14 @@ const HomePage = () => {
                 <h3>Юридически грамотно</h3>
                 <p>Все документы соответствуют актуальному законодательству РФ</p>
               </div>
-              <div className="feature-card">
-                <div className="feature-icon">📱</div>
-                <h3>Удобно</h3>
-                <p>Работает на компьютере, планшете и телефоне без установки ПО</p>
-              </div>
+              
               <div className="feature-card">
                 <div className="feature-icon">🛡️</div>
                 <h3>Безопасно</h3>
                 <p>Ваши данные защищены и не передаются третьим лицам</p>
               </div>
-              <div className="feature-card">
-                <div className="feature-icon">💡</div>
-                <h3>Умный AI</h3>
-                <p>Искусственный интеллект анализирует и предлагает оптимальное решение</p>
-              </div>
-              <div className="feature-card">
-                <div className="feature-icon">📊</div>
-                <h3>Статистика успеха</h3>
-                <p>98% обращений приводят к положительному решению проблемы</p>
-              </div>
+              
+             
             </div>
           </div>
         </section>

@@ -40,7 +40,7 @@ const AboutPage = () => {
       bio: 'Разработка API и серверной инфраструктуры',
       avatar: '🚀',
       skills: ['Python', 'FastAPI', 'Microservices']
-    }
+    },
   ];
 
   const milestones = [
@@ -62,20 +62,7 @@ const AboutPage = () => {
             <p className="hero-subtitle">
               Демократизируем доступ к правовой защите с помощью искусственного интеллекта
             </p>
-            <div className="hero-stats">
-              <div className="stat">
-                <div className="stat-number">500+</div>
-                <div className="stat-label">пользователей</div>
-              </div>
-              <div className="stat">
-                <div className="stat-number">98%</div>
-                <div className="stat-label">успешных обращений</div>
-              </div>
-              <div className="stat">
-                <div className="stat-number">24/7</div>
-                <div className="stat-label">работаем для вас</div>
-              </div>
-            </div>
+            
           </div>
         </section>
 

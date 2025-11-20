@@ -25,26 +25,8 @@ const ChatPage = () => {
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    //autoload
-    if (requestId && messages.length === 0) {
-      sendInitialMessage();
-    }
-  }, [requestId]);
+  const hasSentInitial = useRef(false);
 
-  const sendInitialMessage = async () => {
-    setIsLoading(true);
-    try {
-      // first messages
-      const response = await issueAPI.sendMessage(requestId, "Начинаем анализ проблемы");
-      processApiResponse(response);
-    } catch (error) {
-      console.error('Error starting chat:', error);
-      addErrorMessage();
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const sendMessage = async (text) => {
     if (!text.trim() || isLoading) return;
@@ -102,7 +84,6 @@ const ChatPage = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    
     if (!currentMessage.trim()) return;
 
     const userMessage = {
@@ -113,10 +94,20 @@ const ChatPage = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setCurrentMessage('');
-    
-    await sendMessage(currentMessage);
-  };
+    setCurrentMessage('');  
+
+    setIsLoading(true);
+    try {
+      const response = await issueAPI.sendMessage(requestId, userMessage.text);
+      processApiResponse(response);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      addErrorMessage();
+    } finally {
+      setIsLoading(false);
+    }
+};
+
 
   const handleDownloadDocument = () => {
     if (!documentData) return;

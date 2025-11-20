@@ -217,102 +217,11 @@ const AccountPage = () => {
                 </Button>
               </div>
 
-              {documents.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">📄</div>
-                  <h3>У вас пока нет документов</h3>
-                  <p>Создайте вашу первую жалобу, чтобы она появилась здесь</p>
-                  <Button 
-                    onClick={() => navigate('/')}
-                    variant="primary"
-                  >
-                    Создать документ
-                  </Button>
-                </div>
-              ) : (
-                <div className="documents-grid">
-                  {documents.map((doc) => (
-                    <div key={doc.id} className="document-card">
-                      <div className="document-header">
-                        <h3>{doc.title}</h3>
-                        {getStatusBadge(doc.status)}
-                      </div>
-                      
-                      <div className="document-info">
-                        <div className="info-item">
-                          <span className="label">Тип:</span>
-                          <span className="value">{doc.type}</span>
-                        </div>
-                        <div className="info-item">
-                          <span className="label">Адресат:</span>
-                          <span className="value">{doc.recipient}</span>
-                        </div>
-                        <div className="info-item">
-                          <span className="label">Дата создания:</span>
-                          <span className="value">
-                            {new Date(doc.date).toLocaleDateString('ru-RU')}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="document-actions">
-                        {doc.status === 'completed' ? (
-                          <Button 
-                            variant="primary"
-                            onClick={() => handleDownload(doc.id)}
-                            size="small"
-                          >
-                            📥 Скачать
-                          </Button>
-                        ) : (
-                          <Button 
-                            variant="secondary"
-                            onClick={() => handleContinue(doc.id)}
-                            size="small"
-                          >
-                            ✏️ Продолжить
-                          </Button>
-                        )}
-                        <Button variant="text" size="small">
-                          👁️ Просмотреть
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              
             </div>
           )}
 
-          {activeTab === 'activity' && (
-            <div className="activity-section">
-              <h2>История активности</h2>
-              <div className="activity-list">
-                <div className="activity-item">
-                  <div className="activity-icon">📝</div>
-                  <div className="activity-content">
-                    <p>Создан новый документ "Претензия о возврате денежных средств"</p>
-                    <span className="activity-time">Сегодня в 14:30</span>
-                  </div>
-                </div>
-                <div className="activity-item">
-                  <div className="activity-icon">✅</div>
-                  <div className="activity-content">
-                    <p>Завершена работа над документом "Заявление в Роспотребнадзор"</p>
-                    <span className="activity-time">Вчера в 11:15</span>
-                  </div>
-                </div>
-                <div className="activity-item">
-                  <div className="activity-icon">📥</div>
-                  <div className="activity-content">
-                    <p>Скачан документ "Жалоба на действия банка"</p>
-                    <span className="activity-time">2 дня назад</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
+          
           {activeTab === 'settings' && (
             <div className="settings-section">
               <h2>Настройки аккаунта</h2>

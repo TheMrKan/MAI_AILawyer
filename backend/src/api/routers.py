@@ -113,3 +113,8 @@ async def verify_token(token: str):
             detail="Invalid token"
         )
     return {"valid": True, "user_id": token_data.user_id, "email": token_data.email}
+
+
+@router.get("/me")
+async def get_current_user(current_user=Depends(get_current_user)):
+    return current_user

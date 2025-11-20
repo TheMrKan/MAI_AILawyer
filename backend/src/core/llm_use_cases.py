@@ -9,31 +9,55 @@ from src.dto.laws import LawFragment
 from src.core.templates.types import Template
 
 
-@dataclass
-class ActsAnalysisResult:
-    can_help: bool
-    messages: list[ChatMessage]
-
-
-class __ActsAnalysisLLMResponseSchema(BaseModel):
-    can_help: bool
-    resume_for_user: str
-
-
-__FIRST_SYSTEM_MESSAGE = ChatMessage.from_system(
-    "Ты помогаешь пользователю составить юридически грамотную жалобу или обращение. "
-    "Далее пользователь описывает проблему. "
-    "Не нужно рассказывать о себе и говорить, какова твоя задача. Сразу переходи к сути.")
+__FIRST_SYSTEM_MESSAGE = ChatMessage.from_system("""
+Ты помогаешь пользователю составить юридически грамотную жалобу или обращение.
+Не нужно рассказывать о себе и говорить, какова твоя задача. Сразу переходи к сути.
+Далее пользователь описывает проблему. Тебе нужно решить, достаточно ли информаци для того, чтобы перейти к поиску правовых актов.
+Если информации недостаточно, то задай уточняющий вопрос.
+Пока не принимай решения о том, можно ли помочь пользователю.
+Это решение ты должен будешь принять на следующем этапе после поиска подходящих правовых актов.
+Если считаешь, что нарушения скорее всего нет, то сразу переходи к поиску актов.
+Дай ответ строго в формате JSON без лишних символов по примеру без какого либо форматирования. Чистый JSON файл.
+Поля:
+"is_ready" - 0, пока информации недостаточно. 1 - можно переходить на следующий этап поиска правовых актов.
+"user_message" - уточняющий вопрос для пользователя, если информации недостаточно. Оставь пустым, если переходим к следующему этапу.
+{
+"is_ready": 0,
+"user_message": "Уточняющий вопрос?"
+}
+""")
 
 
 def get_start_system_message():
     return __FIRST_SYSTEM_MESSAGE
 
 
+class __InfoAnalysisLLMResponseSchema(BaseModel):
+    is_ready: bool
+    user_message: str
+
+
+class InfoAnalysisResult(NamedTuple):
+    is_ready_to_continue: bool
+    user_message: str
+
+
+async def analyze_first_info_async(llm: LLMABC,
+                                   chat_history: list[ChatMessage]) -> InfoAnalysisResult:
+
+    ai_response = await llm.invoke_async(messages=chat_history)
+    # даст исключение, если формат не соблюден
+    parsed = json.loads(ai_response.text)
+    validated = __InfoAnalysisLLMResponseSchema(**parsed)
+
+    return InfoAnalysisResult(validated.is_ready, validated.user_message)
+
+
 __ACTS_MESSAGE_TEMPLATE = "Вот такие правовые акты я нашел в своей базе: {acts}"
 
 
 __ACTS_ANALYSIS_MESSAGE = ChatMessage.from_system("""
+Забудь предыдущие инструкции по формату вывода и следуй новым.
 Пиши так, будто акты нашел ты. Проанализируй их и дай очень краткое резюме ситуации.
 Сделай короткое заключение, можно ли помочь пользователю. Не давай инструкций, что ему делать.
 Оценивай строго, можно ли помочь пользователю в данной ситуации.
@@ -51,6 +75,16 @@ __ACTS_ANALYSIS_MESSAGE = ChatMessage.from_system("""
 """)
 
 
+@dataclass
+class ActsAnalysisResult:
+    can_help: bool
+    messages: list[ChatMessage]
+
+
+class __ActsAnalysisLLMResponseSchema(BaseModel):
+    can_help: bool
+    resume_for_user: str
+
 
 async def analyze_acts_async(llm: LLMABC,
                              chat_history: list[ChatMessage],
@@ -58,7 +92,7 @@ async def analyze_acts_async(llm: LLMABC,
     joined_acts = "\n\n".join([a.content for a in law_docs])
     documents_message = ChatMessage.from_ai(__ACTS_MESSAGE_TEMPLATE.format(acts=joined_acts))
 
-    prompt = [documents_message, __ACTS_ANALYSIS_MESSAGE, *chat_history]
+    prompt = [*chat_history, documents_message, __ACTS_ANALYSIS_MESSAGE]
     ai_response = await llm.invoke_async(messages=prompt)
 
     # даст исключение, если формат не соблюден

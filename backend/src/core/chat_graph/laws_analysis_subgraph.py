@@ -53,6 +53,16 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
         return {"messages": [system_message, first_user_message]}
 
     @inject_global
+    async def __analyze_info(self, state: BaseState, llm: LLMABC) -> BaseState:
+        self.__logger.info(f"Analyzing given info...")
+
+        result = await llm_use_cases.analyze_first_info_async(llm, state["messages"])
+        if result.is_ready_to_continue:
+            return {"first_info_completed": True}
+
+        return {"messages": [ChatMessage.from_ai(result.user_message)]}
+
+    @inject_global
     async def __find_law_documents(self, state: BaseState, repo: LawDocsRepositoryABC) -> BaseState:
         docs = await repo.find_fragments_async(state["messages"][0].text)
 

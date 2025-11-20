@@ -9,17 +9,6 @@ from src.dto.laws import LawFragment
 from src.core.templates.types import Template
 
 
-@dataclass
-class ActsAnalysisResult:
-    can_help: bool
-    messages: list[ChatMessage]
-
-
-class __ActsAnalysisLLMResponseSchema(BaseModel):
-    can_help: bool
-    resume_for_user: str
-
-
 __FIRST_SYSTEM_MESSAGE = ChatMessage.from_system("""
 Ты помогаешь пользователю составить юридически грамотную жалобу или обращение.
 Не нужно рассказывать о себе и говорить, какова твоя задача. Сразу переходи к сути.
@@ -43,6 +32,27 @@ def get_start_system_message():
     return __FIRST_SYSTEM_MESSAGE
 
 
+class __InfoAnalysisLLMResponseSchema(BaseModel):
+    is_ready: bool
+    user_message: str
+
+
+class InfoAnalysisResult(NamedTuple):
+    is_ready_to_continue: bool
+    user_message: str
+
+
+async def analyze_first_info_async(llm: LLMABC,
+                                   chat_history: list[ChatMessage]) -> InfoAnalysisResult:
+
+    ai_response = await llm.invoke_async(messages=chat_history)
+    # даст исключение, если формат не соблюден
+    parsed = json.loads(ai_response.text)
+    validated = __InfoAnalysisLLMResponseSchema(**parsed)
+
+    return InfoAnalysisResult(validated.is_ready, validated.user_message)
+
+
 __ACTS_MESSAGE_TEMPLATE = "Вот такие правовые акты я нашел в своей базе: {acts}"
 
 
@@ -63,6 +73,16 @@ __ACTS_ANALYSIS_MESSAGE = ChatMessage.from_system("""
 }
 """)
 
+
+@dataclass
+class ActsAnalysisResult:
+    can_help: bool
+    messages: list[ChatMessage]
+
+
+class __ActsAnalysisLLMResponseSchema(BaseModel):
+    can_help: bool
+    resume_for_user: str
 
 
 async def analyze_acts_async(llm: LLMABC,

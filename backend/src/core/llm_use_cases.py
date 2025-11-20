@@ -57,6 +57,7 @@ __ACTS_MESSAGE_TEMPLATE = "Вот такие правовые акты я наш
 
 
 __ACTS_ANALYSIS_MESSAGE = ChatMessage.from_system("""
+Забудь предыдущие инструкции по формату вывода и следуй новым.
 Пиши так, будто акты нашел ты. Проанализируй их и дай очень краткое резюме ситуации.
 Сделай короткое заключение, можно ли помочь пользователю. Не давай инструкций, что ему делать.
 Оценивай строго, можно ли помочь пользователю в данной ситуации.
@@ -91,7 +92,7 @@ async def analyze_acts_async(llm: LLMABC,
     joined_acts = "\n\n".join([a.content for a in law_docs])
     documents_message = ChatMessage.from_ai(__ACTS_MESSAGE_TEMPLATE.format(acts=joined_acts))
 
-    prompt = [documents_message, __ACTS_ANALYSIS_MESSAGE, *chat_history]
+    prompt = [*chat_history, documents_message, __ACTS_ANALYSIS_MESSAGE]
     ai_response = await llm.invoke_async(messages=prompt)
 
     # даст исключение, если формат не соблюден

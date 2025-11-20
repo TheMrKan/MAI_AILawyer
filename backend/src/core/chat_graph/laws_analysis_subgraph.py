@@ -1,6 +1,7 @@
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
 import logging
+from typing import Literal
 
 from src.core.chat_graph.common import BaseState, InputState, create_process_confirmation_node
 from src.dto.messages import ChatMessage
@@ -25,10 +26,9 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
         self.add_edge("save_first_info", "analyze_info")
 
         self.add_node("analyze_info", self.__analyze_info)
-        self.add_conditional_edges("analyze_info", self.__select_path, {
-            "handle_answer": "handle_answer",
-            "find": "find_law_documents",
-            "END": END
+        self.add_conditional_edges("analyze_info", lambda state: state.get("first_info_completed", False), {
+            True: "find_law_documents",
+            False: "handle_answer"
         })
 
         self.add_node("handle_answer", self.__handle_answer)
@@ -37,8 +37,8 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
         self.add_node("find_law_documents", self.__find_law_documents)
         self.add_edge("find_law_documents", "analyze_law_documents")
 
-        self.add_node("analyze_first_info", self.__analyze_law_documents)
-        self.add_conditional_edges("analyze_first_info", self.__continue_if_true("can_help"), {
+        self.add_node("analyze_law_documents", self.__analyze_law_documents)
+        self.add_conditional_edges("analyze_law_documents", self.__continue_if_true("can_help"), {
             "continue": "confirm0",
             "END": END
         })
@@ -61,6 +61,13 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
             return {"first_info_completed": True}
 
         return {"messages": [ChatMessage.from_ai(result.user_message)]}
+
+    def __handle_answer(self, state: BaseState):
+        user_input = interrupt(None)
+        user_message = ChatMessage.from_user(user_input)
+        self.__logger.debug("Got user answer: %s", user_input)
+
+        return {"messages": [user_message]}
 
     @inject_global
     async def __find_law_documents(self, state: BaseState, repo: LawDocsRepositoryABC) -> BaseState:

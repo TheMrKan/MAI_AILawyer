@@ -99,4 +99,11 @@ async def build_async() -> Provider:
     from src.core.templates.file_service import TemplateFileService
     provider.register_singleton(TemplateFileService, TemplateFileService(templates_storage))
 
+    from src.core.results.iface import IssueResultFileStorageABC
+    from src.external.fs_issue_result_storage import FilesystemIssueResultStorage
+    results_dir = Path(os.getenv("RESULTS_DIR", "./results"))
+    results_dir.mkdir(parents=True, exist_ok=True)
+    results_storage = FilesystemIssueResultStorage(results_dir)
+    provider.register_singleton(IssueResultFileStorageABC, results_storage)
+
     return provider

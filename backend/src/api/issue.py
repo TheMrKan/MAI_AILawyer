@@ -9,7 +9,6 @@ import logging
 from src.core.issue_chat_service import IssueChatService, GraphError
 from src.application.provider import Provider
 from src.dto.messages import ChatMessage, MessageRole as DtoMessageRole
-from src.database.models import Issue
 from src.database.connection import get_db
 from src.api.deps import get_current_user
 from src.core.results.iface import IssueResultFileStorageABC

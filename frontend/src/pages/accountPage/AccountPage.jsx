@@ -1,78 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar/Navbar';
 import Footer from '../../components/Footer/Footer';
 import Button from '../../components/Button/Button';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import Modal from '../../components/Modal/Modal';
+import { userAPI } from '../../services/api';
 import './AccountPage.scss';
 
 const AccountPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('documents');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Данные user
-  const [userData, setUserData] = useState({
-    name: 'Иван Иванов',
-    email: 'ivan@example.com',
-    phone: '+7 (999) 123-45-67',
-    joinDate: '15 января 2024',
-    avatar: '👤'
-  });
+  // Данные пользователя
+  const [userData, setUserData] = useState(null);
+  const [documents, setDocuments] = useState([]);
 
-  // Документы user .
-  const [documents, setDocuments] = useState([
-    {
-      id: 1,
-      title: 'Претензия о возврате денежных средств',
-      date: '2024-01-15',
-      status: 'completed',
-      type: 'Жалоба',
-      recipient: 'Магазин "Электроник"',
-      downloadUrl: '#'
-    },
-    {
-      id: 2,
-      title: 'Заявление в Роспотребнадзор',
-      date: '2024-01-10',
-      status: 'completed',
-      type: 'Заявление',
-      recipient: 'Роспотребнадзор',
-      downloadUrl: '#'
-    },
-    {
-      id: 3,
-      title: 'Жалоба на действия банка',
-      date: '2024-01-05',
-      status: 'draft',
-      type: 'Жалоба',
-      recipient: 'Банк "Финансовый"',
-      downloadUrl: '#'
-    },
-    {
-      id: 4,
-      title: 'Исковое заявление в суд',
-      date: '2024-01-01',
-      status: 'processing',
-      type: 'Исковое заявление',
-      recipient: 'Мировой суд',
-      downloadUrl: '#'
+  // Загружаем данные пользователя
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const user = localStorage.getItem('user');
+        if (user) {
+          setUserData(JSON.parse(user));
+        }
+
+        // Здесь можно добавить загрузку документов с API
+        // const docs = await userAPI.getDocuments();
+        // setDocuments(docs);
+
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, []);
+
+  const handleSaveProfile = async (updatedData) => {
+    try {
+      // await userAPI.updateProfile(updatedData);
+      setUserData(updatedData);
+      localStorage.setItem('user', JSON.stringify(updatedData));
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Ошибка при обновлении профиля');
     }
-  ]);
-
-  // Статистика
-  const stats = {
-    totalDocuments: documents.length,
-    completed: documents.filter(d => d.status === 'completed').length,
-    drafts: documents.filter(d => d.status === 'draft').length,
-    inProgress: documents.filter(d => d.status === 'processing').length
   };
 
   const handleDownload = (documentId) => {
     setIsLoading(true);
-    // пасс
+    // Заглушка для скачивания
     setTimeout(() => {
       alert(`Документ ${documentId} скачивается...`);
       setIsLoading(false);
@@ -87,18 +70,13 @@ const AccountPage = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveProfile = (updatedData) => {
-    setUserData(updatedData);
-    setIsEditModalOpen(false);
-  };
-
   const getStatusBadge = (status) => {
     const statusConfig = {
       completed: { text: 'Завершено', class: 'status-completed', icon: '✅' },
       draft: { text: 'Черновик', class: 'status-draft', icon: '📝' },
       processing: { text: 'В обработке', class: 'status-processing', icon: '⏳' }
     };
-    
+
     const config = statusConfig[status] || statusConfig.draft;
     return (
       <span className={`status-badge ${config.class}`}>
@@ -123,25 +101,25 @@ const AccountPage = () => {
   return (
     <div className="account-page">
       <Navbar />
-      
+
       <div className="account-container">
         {/* Хедер профиля */}
         <div className="profile-header">
           <div className="profile-avatar">
             <div className="avatar-circle">
-              {userData.avatar}
+              {userData?.avatar || '👤'}
             </div>
             <div className="profile-info">
-              <h1>{userData.name}</h1>
-              <p>Участник с {userData.joinDate}</p>
+              <h1>{userData?.name || 'Пользователь'}</h1>
+              <p>Участник с {userData?.joinDate || 'недавно'}</p>
               <div className="profile-contacts">
-                <span className="contact-item">📧 {userData.email}</span>
-                <span className="contact-item">📞 {userData.phone}</span>
+                <span className="contact-item">📧 {userData?.email || 'email@example.com'}</span>
+                <span className="contact-item">📞 {userData?.phone || '+7 (999) 999-99-99'}</span>
               </div>
             </div>
           </div>
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             onClick={handleEditProfile}
             className="edit-profile-btn"
           >
@@ -154,28 +132,28 @@ const AccountPage = () => {
           <div className="stat-card">
             <div className="stat-icon">📄</div>
             <div className="stat-content">
-              <div className="stat-number">{stats.totalDocuments}</div>
+              <div className="stat-number">0</div>
               <div className="stat-label">Всего документов</div>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">✅</div>
             <div className="stat-content">
-              <div className="stat-number">{stats.completed}</div>
+              <div className="stat-number">0</div>
               <div className="stat-label">Завершено</div>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">📝</div>
             <div className="stat-content">
-              <div className="stat-number">{stats.drafts}</div>
+              <div className="stat-number">0</div>
               <div className="stat-label">Черновики</div>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">⏳</div>
             <div className="stat-content">
-              <div className="stat-number">{stats.inProgress}</div>
+              <div className="stat-number">0</div>
               <div className="stat-label">В работе</div>
             </div>
           </div>
@@ -183,19 +161,19 @@ const AccountPage = () => {
 
         {/* Навигация по табам */}
         <div className="tabs-navigation">
-          <button 
+          <button
             className={`tab-btn ${activeTab === 'documents' ? 'active' : ''}`}
             onClick={() => setActiveTab('documents')}
           >
             📋 Мои документы
           </button>
-          <button 
+          <button
             className={`tab-btn ${activeTab === 'activity' ? 'active' : ''}`}
             onClick={() => setActiveTab('activity')}
           >
             📊 Активность
           </button>
-          <button 
+          <button
             className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
             onClick={() => setActiveTab('settings')}
           >
@@ -209,7 +187,7 @@ const AccountPage = () => {
             <div className="documents-section">
               <div className="section-header">
                 <h2>Мои документы</h2>
-                <Button 
+                <Button
                   onClick={() => navigate('/')}
                   className="create-new-btn"
                 >
@@ -217,11 +195,90 @@ const AccountPage = () => {
                 </Button>
               </div>
 
-              
+              <div className="documents-grid">
+                {documents.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">📄</div>
+                    <h3>У вас пока нет документов</h3>
+                    <p>Создайте свой первый документ, чтобы начать работу</p>
+                    <Button onClick={() => navigate('/')}>
+                      Создать документ
+                    </Button>
+                  </div>
+                ) : (
+                  documents.map(doc => (
+                    <div key={doc.id} className="document-card">
+                      <div className="document-header">
+                        <h3>{doc.title}</h3>
+                        {getStatusBadge(doc.status)}
+                      </div>
+                      <div className="document-info">
+                        <div className="info-item">
+                          <span className="label">Тип:</span>
+                          <span className="value">{doc.type}</span>
+                        </div>
+                        <div className="info-item">
+                          <span className="label">Получатель:</span>
+                          <span className="value">{doc.recipient}</span>
+                        </div>
+                        <div className="info-item">
+                          <span className="label">Дата создания:</span>
+                          <span className="value">{doc.date}</span>
+                        </div>
+                      </div>
+                      <div className="document-actions">
+                        <Button
+                          size="small"
+                          onClick={() => handleDownload(doc.id)}
+                        >
+                          📥 Скачать
+                        </Button>
+                        {doc.status === 'draft' && (
+                          <Button
+                            variant="secondary"
+                            size="small"
+                            onClick={() => handleContinue(doc.id)}
+                          >
+                            ➕ Продолжить
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
 
-          
+          {activeTab === 'activity' && (
+            <div className="activity-section">
+              <h2>История активности</h2>
+              <div className="activity-list">
+                <div className="activity-item">
+                  <div className="activity-icon">📄</div>
+                  <div className="activity-content">
+                    <p>Вы создали новый документ "Претензия о возврате денежных средств"</p>
+                    <span className="activity-time">15 января 2024, 14:30</span>
+                  </div>
+                </div>
+                <div className="activity-item">
+                  <div className="activity-icon">✅</div>
+                  <div className="activity-content">
+                    <p>Документ "Заявление в Роспотребнадзор" успешно сгенерирован</p>
+                    <span className="activity-time">10 января 2024, 11:15</span>
+                  </div>
+                </div>
+                <div className="activity-item">
+                  <div className="activity-icon">🔔</div>
+                  <div className="activity-content">
+                    <p>Вы зарегистрировались в системе</p>
+                    <span className="activity-time">1 января 2024, 10:00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'settings' && (
             <div className="settings-section">
               <h2>Настройки аккаунта</h2>
@@ -262,7 +319,7 @@ const AccountPage = () => {
         title="Редактирование профиля"
         size="medium"
       >
-        <EditProfileForm 
+        <EditProfileForm
           userData={userData}
           onSave={handleSaveProfile}
           onCancel={() => setIsEditModalOpen(false)}
@@ -272,9 +329,9 @@ const AccountPage = () => {
   );
 };
 
-
+// Компонент формы редактирования профиля
 const EditProfileForm = ({ userData, onSave, onCancel }) => {
-  const [formData, setFormData] = useState(userData);
+  const [formData, setFormData] = useState(userData || {});
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -294,27 +351,27 @@ const EditProfileForm = ({ userData, onSave, onCancel }) => {
         <label>Имя и фамилия</label>
         <input
           type="text"
-          value={formData.name}
+          value={formData.name || ''}
           onChange={(e) => handleChange('name', e.target.value)}
           placeholder="Введите ваше имя"
         />
       </div>
-      
+
       <div className="form-group">
         <label>Email</label>
         <input
           type="email"
-          value={formData.email}
+          value={formData.email || ''}
           onChange={(e) => handleChange('email', e.target.value)}
           placeholder="Введите ваш email"
         />
       </div>
-      
+
       <div className="form-group">
         <label>Телефон</label>
         <input
           type="tel"
-          value={formData.phone}
+          value={formData.phone || ''}
           onChange={(e) => handleChange('phone', e.target.value)}
           placeholder="Введите ваш телефон"
         />

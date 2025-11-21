@@ -5,6 +5,7 @@ import ChatPage from './pages/ChatPage/ChatPage';
 import AccountPage from './pages/AccountPage/AccountPage';
 import AuthPage from './pages/AuthPage/AuthPage';
 import AboutPage from './pages/AboutPage/AboutPage';
+import AuthCallbackPage from './pages/AuthCallbackPage/AuthCallbackPage';
 import './styles/globals.scss';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
           <Route path="/account" element={<AccountPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/signin" element={<AuthPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="*" element={<div>Страница не найдена</div>} />
         </Routes>
       </div>

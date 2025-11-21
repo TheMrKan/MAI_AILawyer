@@ -92,6 +92,8 @@ async def create_issue(
         created_at=created_at
     )
 
+class IssueCreateSchema(BaseModel):
+    text: str
 
 @router.post('/chat/{issue_id}/')
 async def chat(
@@ -112,3 +114,38 @@ async def chat(
         raise HTTPException(status_code=500, detail="Произошла непредвиденная ошибка")
 
     return ChatUpdateSchema(new_messages=new_messages, is_ended=is_ended)
+
+
+@router.get('/{issue_id}/download/')
+async def download_issue_file(
+        issue_id: int,
+        provider: Annotated[Provider, Depends(Provider)],
+        db: AsyncSession = Depends(get_db),
+        current_user=Depends(get_current_user)
+):
+    try:
+        storage = provider[IssueResultFileStorageABC]
+
+        issue = await db.get(Issue, issue_id)
+        if not issue:
+            raise HTTPException(status_code=404, detail="Issue not found")
+
+        if issue.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        with storage.read_issue_result_file(str(issue_id)) as file:
+            file_content = file.read()
+
+        return StreamingResponse(
+            iter([file_content]),
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                "Content-Disposition": f"attachment; filename=issue_{issue_id}_result.docx"
+            }
+        )
+
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found for this issue")
+    except Exception as e:
+        logger.exception("Error downloading issue file", exc_info=e)
+        raise HTTPException(status_code=500, detail="Failed to download file")

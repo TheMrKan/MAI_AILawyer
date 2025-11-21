@@ -1,0 +1,440 @@
+@import '../../styles/variables';
+@import '../../styles/mixins';
+.home-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.main-content {
+  flex: 1;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+
+  @include mobile {
+    padding: 0 1rem;
+  }
+}
+
+// ОСнова
+.hero-section {
+  padding: 4rem 0;
+  background: linear-gradient(135deg, $primary-color 0%, $secondary-color 100%);
+  color: $white;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+}
+
+.hero-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+
+  @include tablet {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    text-align: center;
+  }
+}
+
+.hero-text {
+  .hero-title {
+    font-size: 3.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, $white 0%, rgba($white, 0.9) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+
+    @include mobile {
+      font-size: 2.5rem;
+    }
+  }
+
+  .hero-subtitle {
+    font-size: 1.3rem;
+    opacity: 0.9;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+
+    @include mobile {
+      font-size: 1.1rem;
+    }
+  }
+}
+
+.hero-stats {
+  display: flex;
+  gap: 2rem;
+  margin-top: 2rem;
+
+  @include mobile {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .stat {
+    text-align: center;
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: bold;
+      line-height: 1;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+  }
+}
+
+.hero-visual {
+  position: relative;
+  height: 400px;
+
+  @include tablet {
+    height: 300px;
+  }
+}
+
+.floating-card {
+  position: absolute;
+  background: rgba($white, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba($white, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  animation: float 6s ease-in-out infinite;
+
+  .card-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    margin: 0;
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+
+  &.card-1 {
+    top: 20%;
+    left: 10%;
+    animation-delay: 0s;
+  }
+
+  &.card-2 {
+    top: 50%;
+    right: 10%;
+    animation-delay: 2s;
+  }
+
+  &.card-3 {
+    bottom: 20%;
+    left: 30%;
+    animation-delay: 4s;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+// Форма
+.form-section {
+  padding: 4rem 0;
+  background: $white;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 3rem;
+
+  h2 {
+    font-size: 2.5rem;
+    color: $dark-text;
+    margin-bottom: 1rem;
+
+    @include mobile {
+      font-size: 2rem;
+    }
+  }
+
+  p {
+    font-size: 1.2rem;
+    color: $gray;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+.problem-form {
+  max-width: 800px;
+  margin: 0 auto 4rem;
+}
+
+.textarea-container {
+  margin-bottom: 2rem;
+}
+
+.textarea-label {
+  display: block;
+  font-weight: 600;
+  color: $dark-text;
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+}
+
+.problem-textarea {
+  width: 100%;
+  padding: 1.5rem;
+  border: 2px solid $light-gray;
+  border-radius: 12px;
+  background: $white;
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 200px;
+  transition: all 0.3s ease;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+  }
+
+  &:disabled {
+    background: $light-bg;
+    cursor: not-allowed;
+  }
+
+  &::placeholder {
+    color: $gray;
+  }
+}
+
+.textarea-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.char-count {
+  font-size: 0.9rem;
+  color: $gray;
+}
+
+.clear-btn {
+  background: none;
+  border: none;
+  color: $error-color;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba($error-color, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.submit-button {
+  width: 100%;
+  font-size: 1.1rem;
+  padding: 1.25rem 2rem;
+}
+
+// Примеры
+.quick-examples {
+  h3 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: $dark-text;
+  }
+}
+
+.examples-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.example-card {
+  background: $light-bg;
+  padding: 2rem;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+
+  &:hover {
+    transform: translateY(-5px);
+    border-color: $primary-color;
+    box-shadow: $shadow-lg;
+  }
+
+  .example-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  h4 {
+    margin-bottom: 0.5rem;
+    color: $dark-text;
+  }
+
+  p {
+    color: $gray;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+  }
+}
+
+// Фича
+.features-section {
+  padding: 4rem 0;
+  background: $light-bg;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+}
+
+.feature-card {
+  background: $white;
+  padding: 2.5rem 2rem;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: $shadow;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: $shadow-lg;
+    border-color: $primary-color;
+  }
+
+  .feature-icon {
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+  }
+
+  h3 {
+    margin-bottom: 1rem;
+    color: $dark-text;
+  }
+
+  p {
+    color: $gray;
+    line-height: 1.6;
+    margin: 0;
+  }
+}
+
+// Ос
+.how-it-works {
+  padding: 4rem 0;
+  background: $white;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+
+  @include mobile {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+
+  .step-number {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, $primary-color, $secondary-color);
+    color: $white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+
+  .step-content {
+    h3 {
+      margin-bottom: 0.5rem;
+      color: $dark-text;
+    }
+
+    p {
+      color: $gray;
+      line-height: 1.5;
+      margin: 0;
+    }
+  }
+}
+
+// Аутентификация
+.auth-modal-content {
+  text-align: center;
+
+  p {
+    margin-bottom: 2rem;
+    color: $gray;
+    line-height: 1.5;
+  }
+}
+
+.auth-modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}

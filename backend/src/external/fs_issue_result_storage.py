@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from src.core.results.iface import IssueResultFileStorageABC
 
 
-class FilesystemIssueResultStorageABC(IssueResultFileStorageABC):
+class FilesystemIssueResultStorage(IssueResultFileStorageABC):
 
     __path: os.PathLike
 
@@ -19,4 +19,12 @@ class FilesystemIssueResultStorageABC(IssueResultFileStorageABC):
     @contextmanager
     def write_issue_result_file(self, issue_id: str) -> Generator[BinaryIO, None, None]:
         with open(self.__get_filepath(issue_id), "wb") as f:
+            yield f
+
+    @contextmanager
+    def read_issue_result_file(self, issue_id: str) -> Generator[BinaryIO, None, None]:
+        filepath = self.__get_filepath(issue_id)
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"File for issue {issue_id} not found")
+        with open(filepath, "rb") as f:
             yield f

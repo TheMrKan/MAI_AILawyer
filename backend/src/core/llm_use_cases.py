@@ -213,7 +213,7 @@ class __LoopIterationLLMResponseSchema(BaseModel):
 async def loop_iteration_async(llm: LLMABC, chat_history: list[ChatMessage]) -> tuple[bool, ChatMessage | None]:
     prompt = [
         *chat_history,
-        ChatMessage.from_system('Ответ должен быть строго в формате JSON как в инструкции. {{"user_message": "Вопрос пользователю?", "is_ready": false}}')
+        ChatMessage.from_system('Ответ должен быть строго в формате JSON как в инструкции. {{"user_message": "Вопрос пользователю?", "is_ready": false}}. Не повторяй вопросы, проверь, что ты не задавал этот вопрос.')
     ]
     response = await llm.invoke_async(messages=prompt)
     # даст исключение, если формат не соблюден
@@ -229,6 +229,7 @@ __FREE_TEMPLATE_PREPARE_VALUES_TEXT = """
 Не забывай, что там, где пользователь должен вписать свои перс. данные (ФИО, адрес, номер телефона, email) должны быть прочерки (____) чтобы пользователь заполнил их сам.
 Всё, кроме прес. данных, ты должен заполнить сам.
 Ответ дай строго в формате JSON без лишнего текста. Содержимое: "название поля": "значение". В примере еще раз даны все поля и краткие пояснения к ним.
+В содержимом не должно быть того, что уже в шаблоне. Пиши туда не весь шаблон, а только то, что должно быть подставлено на место поля.
 {{
 {fields}
 }}

@@ -32,6 +32,22 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    ports:
+      - "5173:5173"
+    volumes:
+      - "./frontend:/app"
+      - "/app/node_modules"
+    environment:
+      - VITE_API_URL=http://localhost:8000/
+
+    depends_on:
+      - backend
+    restart: no
+
   chroma:
     image: chromadb/chroma
     volumes:
@@ -43,4 +59,5 @@ services:
 
 volumes:
   chroma-data:
+  node_modules:
   postgres_data:

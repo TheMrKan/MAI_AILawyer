@@ -94,7 +94,7 @@ async def create_issue(
 class IssueCreateSchema(BaseModel):
     text: str
 
-@router.post('/chat/{issue_id}/')
+@router.post('/{issue_id}/chat/')
 async def chat(
         issue_id: int,
         message: AddUserMessageSchema,

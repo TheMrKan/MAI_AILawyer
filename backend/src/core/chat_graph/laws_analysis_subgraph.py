@@ -60,14 +60,14 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
         if result.is_ready_to_continue:
             return {"first_info_completed": True}
 
-        return {"messages": [ChatMessage.from_ai(result.user_message)]}
+        return {"messages": [*state["messages"], ChatMessage.from_ai(result.user_message)]}
 
     def __handle_answer(self, state: BaseState):
         user_input = interrupt(None)
         user_message = ChatMessage.from_user(user_input)
         self.__logger.debug("Got user answer: %s", user_input)
 
-        return {"messages": [user_message]}
+        return {"messages": [*state["messages"], user_message]}
 
     @inject_global
     async def __find_law_documents(self, state: BaseState, llm: LLMABC, repo: LawDocsRepositoryABC) -> BaseState:
@@ -83,7 +83,7 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
     async def __analyze_law_documents(self, state: BaseState, llm: LLMABC) -> BaseState:
         acts_analysis_result = await llm_use_cases.analyze_acts_async(llm, state["messages"], state["law_docs"])
         self.__logger.info(f"Acts analysis result: {acts_analysis_result}")
-        return {"can_help": acts_analysis_result.can_help, "messages": acts_analysis_result.messages}
+        return {"can_help": acts_analysis_result.can_help, "messages": state["messages"] + acts_analysis_result.messages}
 
     def __continue_if_true(self, key: str):
         def wrapper(state: BaseState):

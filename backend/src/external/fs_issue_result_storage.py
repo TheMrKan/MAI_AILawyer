@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from src.core.results.iface import IssueResultFileStorageABC
 
 
-class FilesystemIssueResultStorage(IssueResultFileStorageABC):
+class FilesystemIssueResultStorageABC(IssueResultFileStorageABC):
 
     __path: os.PathLike
 

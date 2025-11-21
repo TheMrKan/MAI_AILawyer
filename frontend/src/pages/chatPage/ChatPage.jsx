@@ -10,12 +10,15 @@ import './ChatPage.scss';
 const ChatPage = () => {
   const { requestId } = useParams();
   const navigate = useNavigate();
+  
   const [messages, setMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isChatEnded, setIsChatEnded] = useState(false);
   const [documentData, setDocumentData] = useState(null);
+
   const messagesEndRef = useRef(null);
+  const hasSentInitial = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -25,182 +28,212 @@ const ChatPage = () => {
     scrollToBottom();
   }, [messages]);
 
-  const hasSentInitial = useRef(false);
+
+  
+  // ---------- ЕДИНАЯ ФУНКЦИЯ ОТПРАВКИ ----------
+ const sendMessageToBackend = async (text) => {
+  console.log("=== НАЧАЛО ОТПРАВКИ ===");
+  console.log("📝 Текст:", text);
+  console.log("🆔 requestId:", requestId);
+  console.log("⏳ isLoading:", isLoading);
+  console.log("❌ isChatEnded:", isChatEnded);
+
+  if (!text.trim()) {
+    console.log("❌ Текст пустой - выход");
+    return;
+  }
+  if (isLoading) {
+    console.log("❌ Уже идет загрузка - выход");
+    return;
+  }
+  if (!requestId) {
+    console.log("❌ Нет requestId - выход");
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    console.log("🟡 Вызываем issueAPI.sendMessage...");
+    console.log("📤 Параметры:", { requestId, text });
+    
+    const response = await issueAPI.sendMessage(requestId, { text });
+    console.log("✅ УСПЕХ: Ответ от API:", response);
+    
+    processApiResponse(response);
+  } catch (error) {
+    console.error("❌ ОШИБКА:", error);
+    console.error("❌ Response data:", error.response?.data);
+    console.error("❌ Response status:", error.response?.status);
+    console.error("❌ Response headers:", error.response?.headers);
+    addErrorMessage();
+  } finally {
+    setIsLoading(false);
+    console.log("=== КОНЕЦ ОТПРАВКИ ===");
+  }
+};
 
 
-  const sendMessage = async (text) => {
-    if (!text.trim() || isLoading) return;
 
-    setIsLoading(true);
-
-    try {
-      const response = await issueAPI.sendMessage(requestId, text);
-      processApiResponse(response);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      addErrorMessage();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // ---------- ОБРАБОТКА ОТВЕТА ----------
   const processApiResponse = (response) => {
+    if (!response || !Array.isArray(response.new_messages)) return;
+
     const newMessages = response.new_messages.map(msg => ({
       id: Date.now() + Math.random(),
       text: msg.text,
-      sender: msg.role === 'user' ? 'user' : 'ai',
+      sender: msg.role === "user" ? "user" : "ai",
       timestamp: new Date()
     }));
 
     setMessages(prev => [...prev, ...newMessages]);
     setIsChatEnded(response.is_ended);
 
-    
-    if (response.is_ended) {
-      prepareDocumentData();
-    }
+    if (response.is_ended) prepareDocumentData();
   };
 
+
+  // ---------- СООБЩЕНИЕ ОБ ОШИБКЕ ----------
   const addErrorMessage = () => {
-    const errorMessage = {
-      id: Date.now(),
-      text: 'Произошла ошибка при отправке сообщения. Пожалуйста, попробуйте снова.',
-      sender: 'ai',
-      timestamp: new Date()
-    };
-    setMessages(prev => [...prev, errorMessage]);
+    setMessages(prev => [
+      ...prev,
+      {
+        id: Date.now(),
+        text: "Произошла ошибка. Попробуйте снова.",
+        sender: "ai",
+        timestamp: new Date()
+      }
+    ]);
   };
 
+
+  // ---------- ДАННЫЕ ГОТОВОГО ДОКУМЕНТА ----------
   const prepareDocumentData = () => {
-    // Временные данные документа
     setDocumentData({
-      title: 'Претензия о возврате денежных средств',
-      type: 'Жалоба',
+      title: "Претензия о возврате денежных средств",
+      type: "Жалоба",
       recipient: 'Магазин "Электроник"',
-      date: new Date().toLocaleDateString('ru-RU'),
-      content: 'Полный текст сгенерированного документа будет здесь...'
+      date: new Date().toLocaleDateString("ru-RU"),
+      content: "Полный текст документа..."
     });
   };
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!currentMessage.trim()) return;
 
-    const userMessage = {
-      id: Date.now(),
-      text: currentMessage,
-      sender: 'user',
-      timestamp: new Date()
-    };
+  // ---------- ОТПРАВКА ИЗ ФОРМЫ ----------
+  const handleSendMessage = (e) => {
+  e.preventDefault();
+  if (!currentMessage.trim()) return;
 
-    setMessages(prev => [...prev, userMessage]);
-    setCurrentMessage('');  
+  const userMessage = {
+    id: Date.now(),
+    text: currentMessage,
+    sender: "user",
+    timestamp: new Date()
+  };
 
-    setIsLoading(true);
-    try {
-      const response = await issueAPI.sendMessage(requestId, userMessage.text);
-      processApiResponse(response);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      addErrorMessage();
-    } finally {
-      setIsLoading(false);
-    }
+  setMessages(prev => [...prev, userMessage]);
+
+  const msg = currentMessage;  
+  setCurrentMessage("");
+
+  // КРИТИЧЕСКИЙ ВЫЗОВ: отправляем на бэк
+  sendMessageToBackend(msg);
 };
 
 
+
+  // ---------- СКАЧИВАНИЕ ДОКУМЕНТА ----------
   const handleDownloadDocument = () => {
     if (!documentData) return;
 
     setIsLoading(true);
-    
-    // Имитация загрузки документа
+
     setTimeout(() => {
-      const element = document.createElement('a');
-      const file = new Blob([documentData.content], { type: 'text/plain' });
+      const element = document.createElement("a");
+      const file = new Blob([documentData.content], { type: "text/plain" });
       element.href = URL.createObjectURL(file);
-      element.download = `${documentData.title.toLowerCase().replace(/\s+/g, '_')}.docx`;
+      element.download = `${documentData.title.toLowerCase().replace(/\s+/g, "_")}.docx`;
       document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
+
       setIsLoading(false);
-    }, 2000);
+    }, 1500);
   };
+
 
   const handleContinueEditing = () => {
     setIsChatEnded(false);
-    setCurrentMessage('Хочу внести правки в документ');
+    setCurrentMessage("Хочу внести правки в документ");
   };
 
   const handleNewDocument = () => {
     navigate('/');
   };
 
+
   const formatTime = (date) => {
-    return date.toLocaleTimeString('ru-RU', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return date.toLocaleTimeString("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit"
     });
   };
+
+
+  // ========================================================
+  // ===================== RENDER ===========================
+  // ========================================================
 
   return (
     <div className="chat-page">
       <Navbar />
-      
+
       <div className="chat-container">
-        {/* Хедер чата */}
+        
+        {/* HEADER */}
         <div className="chat-header">
           <div className="chat-info">
-            <Button 
-              variant="text" 
-              onClick={() => navigate('/')}
-              className="back-button"
-            >
+            <Button variant="text" onClick={() => navigate('/')} className="back-button">
               ← Назад к главной
             </Button>
             <h1>Диалог с AI-помощником</h1>
             <p>ID запроса: <span className="request-id">{requestId}</span></p>
           </div>
-          
+
           <div className="chat-actions">
-            <Button 
-              variant="secondary" 
-              onClick={() => navigate('/account')}
-              size="small"
-            >
+            <Button variant="secondary" onClick={() => navigate('/account')} size="small">
               📋 Мои документы
             </Button>
           </div>
         </div>
 
-        {/* Область сообщений */}
+
+        {/* MESSAGES */}
         <div className="chat-messages">
           {messages.length === 0 ? (
             <div className="empty-chat">
               <div className="empty-icon">💬</div>
               <h3>Начинаем анализ вашей проблемы</h3>
-              <p>AI-помощник обрабатывает ваше обращение...</p>
-              <LoadingSpinner size="medium" text="Подключаемся к сервису" />
+              <p>AI-помощник подключается...</p>
+              <LoadingSpinner size="medium" text="Подключение" />
             </div>
           ) : (
             <div className="messages-container">
-              {messages.map((message) => (
+              {messages.map(message => (
                 <div
                   key={message.id}
                   className={`message ${message.sender === 'user' ? 'message-user' : 'message-ai'}`}
                 >
                   <div className="message-avatar">
-                    {message.sender === 'user' ? '👤' : '🤖'}
+                    {message.sender === "user" ? "👤" : "🤖"}
                   </div>
                   <div className="message-content">
                     <div className="message-text">{message.text}</div>
-                    <div className="message-time">
-                      {formatTime(message.timestamp)}
-                    </div>
+                    <div className="message-time">{formatTime(message.timestamp)}</div>
                   </div>
                 </div>
               ))}
-              
+
               {isLoading && (
                 <div className="message message-ai">
                   <div className="message-avatar">🤖</div>
@@ -208,9 +241,7 @@ const ChatPage = () => {
                     <div className="typing-indicator">
                       <span>AI-помощник печатает</span>
                       <div className="typing-dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
+                        <span></span><span></span><span></span>
                       </div>
                     </div>
                   </div>
@@ -218,11 +249,12 @@ const ChatPage = () => {
               )}
             </div>
           )}
-          
+
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Секция готового документа */}
+
+        {/* DOCUMENT CARD */}
         {isChatEnded && documentData && (
           <div className="document-section">
             <div className="document-card">
@@ -233,7 +265,7 @@ const ChatPage = () => {
                   <p>{documentData.title}</p>
                 </div>
               </div>
-              
+
               <div className="document-details">
                 <div className="detail-item">
                   <span className="label">Тип документа:</span>
@@ -254,22 +286,13 @@ const ChatPage = () => {
                   variant="primary"
                   onClick={handleDownloadDocument}
                   loading={isLoading}
-                  className="action-btn"
                 >
                   📥 Скачать DOCX
                 </Button>
-                <Button 
-                  variant="secondary"
-                  onClick={handleContinueEditing}
-                  className="action-btn"
-                >
+                <Button variant="secondary" onClick={handleContinueEditing}>
                   ✏️ Продолжить редактирование
                 </Button>
-                <Button 
-                  variant="text"
-                  onClick={() => navigate('/account')}
-                  className="action-btn"
-                >
+                <Button variant="text" onClick={() => navigate('/account')}>
                   💾 Сохранить в профиль
                 </Button>
               </div>
@@ -277,7 +300,8 @@ const ChatPage = () => {
           </div>
         )}
 
-        {/* Форма ввода сообщения */}
+
+        {/* INPUT FORM */}
         {!isChatEnded && (
           <form onSubmit={handleSendMessage} className="chat-input-form">
             <div className="input-container">
@@ -285,12 +309,12 @@ const ChatPage = () => {
                 type="text"
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
-                placeholder="Введите ваш ответ или задайте вопрос..."
+                placeholder="Введите ваш ответ..."
                 className="chat-input"
                 disabled={isLoading}
               />
               <Button 
-                type="submit" 
+                type="submit"
                 className="send-button"
                 disabled={isLoading || !currentMessage.trim()}
                 loading={isLoading}
@@ -298,27 +322,30 @@ const ChatPage = () => {
                 Отправить
               </Button>
             </div>
-            <div className="input-hint">
-              Нажмите Enter для отправки сообщения
-            </div>
+
+            <div className="input-hint">Нажмите Enter для отправки сообщения</div>
           </form>
         )}
 
-        {/* Быстрые действия после завершения */}
+
+        {/* QUICK ACTIONS */}
         {isChatEnded && (
           <div className="quick-actions">
             <div className="actions-title">Что дальше?</div>
+
             <div className="actions-grid">
               <div className="action-card" onClick={handleNewDocument}>
                 <div className="action-icon">🆕</div>
                 <h4>Новый документ</h4>
-                <p>Создайте следующее обращение</p>
+                <p>Создать новое обращение</p>
               </div>
+
               <div className="action-card" onClick={() => navigate('/account')}>
                 <div className="action-icon">📋</div>
                 <h4>Мои документы</h4>
-                <p>Перейти к истории обращений</p>
+                <p>Посмотреть историю</p>
               </div>
+
               <div className="action-card">
                 <div className="action-icon">ℹ️</div>
                 <h4>Помощь</h4>

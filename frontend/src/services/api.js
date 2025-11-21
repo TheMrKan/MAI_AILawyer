@@ -34,19 +34,19 @@ export const issueAPI = {
   // новый issue
   async createIssue(description) {
     try {
-      // Временно генерируем случайный ID, пока бэкенд не реализует создание ЕГорррррр
-      const issueId = Math.floor(Math.random() * 1000) + 1;
-      return { issue_id: issueId };
+      const response = await api.post('/issues/', { description });
+      return response.data;
     } catch (error) {
       console.error('Error creating issue:', error);
       throw error;
     }
   },
 
-  // Отправка сообщения в чат
-  async sendMessage(issueId, text) {
+  // Отправка сообщения в чат - ИСПРАВЛЕННАЯ ВЕРСИЯ
+   async sendMessage(issueId, messageData) {
     try {
-      const response = await api.post(`/issue/${issueId}/chat/`, { text });
+      // МЕНЯЕМ с /issues/{issue_id}/messages/ на /issue/{issue_id}/chat/
+      const response = await api.post(`/issue/${issueId}/chat/`, messageData);
       return response.data;
     } catch (error) {
       console.error('Error sending message:', error);
@@ -57,8 +57,8 @@ export const issueAPI = {
   // Проверка статуса issue
   async getIssueStatus(issueId) {
     try {
-      // Временная заглушка
-      return { is_ended: false };
+      const response = await api.get(`/issues/${issueId}/`);
+      return response.data;
     } catch (error) {
       console.error('Error getting issue status:', error);
       throw error;
@@ -68,8 +68,8 @@ export const issueAPI = {
   // Получение истории сообщений
   async getChatHistory(issueId) {
     try {
-      // Временная заглушка
-      return { messages: [] };
+      const response = await api.get(`/issues/${issueId}/messages/`);
+      return response.data;
     } catch (error) {
       console.error('Error getting chat history:', error);
       throw error;

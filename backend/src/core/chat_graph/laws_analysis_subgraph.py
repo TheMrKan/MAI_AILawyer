@@ -70,8 +70,11 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
         return {"messages": [user_message]}
 
     @inject_global
-    async def __find_law_documents(self, state: BaseState, repo: LawDocsRepositoryABC) -> BaseState:
-        docs = await repo.find_fragments_async(state["messages"][0].text)
+    async def __find_law_documents(self, state: BaseState, llm: LLMABC, repo: LawDocsRepositoryABC) -> BaseState:
+        query = await llm_use_cases.prepare_laws_query_async(llm, state["messages"])
+        self.__logger.debug("Prepared laws query: %s", query)
+
+        docs = await repo.find_fragments_async(query)
 
         self.__logger.info(f"Adding documents: \n{docs}")
         return {"law_docs": docs}

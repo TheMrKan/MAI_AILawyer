@@ -1,3 +1,6 @@
+## UPDATE
+Смотрите репозиторий этой версии: https://github.com/TheMrKan/MAI_AILawyer/tree/ea43d56f50370d9a02fa9fb00f78609885626487
+
 ## Сборка
 Путь до Dockerfile: ./backend/Dockerfile
 

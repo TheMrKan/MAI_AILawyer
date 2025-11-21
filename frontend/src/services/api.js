@@ -34,7 +34,9 @@ export const issueAPI = {
   // новый issue
   async createIssue(description) {
     try {
-      const response = await api.post('/issues/', { description });
+      const response = await api.post('/issue/create', { 
+        text: description  // МЕНЯЕМ "description" на "text"
+      });
       return response.data;
     } catch (error) {
       console.error('Error creating issue:', error);

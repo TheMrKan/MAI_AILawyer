@@ -99,4 +99,11 @@ async def build_async() -> Provider:
     from src.core.templates.file_service import TemplateFileService
     provider.register_singleton(TemplateFileService, TemplateFileService(templates_storage))
 
+    from src.core.results.iface import IssueResultFileStorageABC
+    from src.external.fs_issue_result_storage import FilesystemIssueResultStorageABC
+    results_dir = Path(os.getenv("RESULTS_DIR") or "")
+    if not results_dir.exists():
+        raise Exception("RESULTS_DIR env var must be set")
+    provider.register_singleton(IssueResultFileStorageABC, FilesystemIssueResultStorageABC(results_dir))
+
     return provider

@@ -57,7 +57,9 @@ const ChatPage = () => {
     console.log("🟡 Вызываем issueAPI.sendMessage...");
     console.log("📤 Параметры:", { requestId, text });
     
-    const response = await issueAPI.sendMessage(requestId, { text });
+     const response = await issueAPI.sendMessage(requestId, { 
+      text: text 
+    });
     console.log("✅ УСПЕХ: Ответ от API:", response);
     
     processApiResponse(response);

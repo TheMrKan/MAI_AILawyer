@@ -15,7 +15,7 @@ class CerebrasLLM(LLMABC):
         MessageRole.AI: "assistant"
     }
 
-    MODEL_STRONG = "zai-glm-4.6"
+    MODEL_STRONG = "qwen-3-235b-a22b-instruct-2507"
     MODEL_WEAK = "llama3.1-8b"
 
     cerebras: AsyncCerebras
@@ -31,7 +31,8 @@ class CerebrasLLM(LLMABC):
 
         response = await self.cerebras.chat.completions.create(
             messages = [self.__serialize_message(m) for m in messages],
-            model = model
+            model = model,
+            temperature=0.3
         )
 
         self.__logger.debug("LLM Response (tokens: %s/%s/%s):\n%s",

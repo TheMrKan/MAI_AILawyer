@@ -32,10 +32,11 @@ const ChatPage = () => {
     }, []); // вызывается один раз
 
   const loadChat = () => {
-      if (loadCalled) {
+      if (!loadCalled) {
+          loadCalled = true;
           return;
       }
-      loadCalled = true;
+
       try {
           issueAPI.getChatHistory(requestId).then((history) => {
               console.log(history);
@@ -47,6 +48,7 @@ const ChatPage = () => {
                 }));
 
                 setMessages(prev => [...prev, ...newMessages]);
+                console.log("Set is chat ended")
                 setIsChatEnded(history.is_ended);
           });
 
@@ -68,11 +70,6 @@ const ChatPage = () => {
 
     setMessages(prev => [...prev, ...newMessages]);
     setIsChatEnded(response.is_ended);
-
-    
-    if (response.is_ended) {
-      prepareDocumentData();
-    }
   };
 
   const addErrorMessage = () => {
@@ -112,23 +109,48 @@ const ChatPage = () => {
 };
 
 
-  const handleDownloadDocument = () => {
-    if (!documentData) return;
 
-    setIsLoading(true);
-    
-    // Имитация загрузки документа
-    setTimeout(() => {
-      const element = document.createElement('a');
-      const file = new Blob([documentData.content], { type: 'text/plain' });
-      element.href = URL.createObjectURL(file);
-      element.download = `${documentData.title.toLowerCase().replace(/\s+/g, '_')}.docx`;
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-      setIsLoading(false);
-    }, 2000);
-  };
+  const handleDownloadDocument = async () => {
+  setIsLoading(true);
+
+  try {
+    const response = await fetch(`http://localhost:8000/issue/${requestId}/download/`, {
+      method: 'GET',
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      throw new Error('Ошибка загрузки документа');
+    }
+
+    const blob = await response.blob();
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    // имя можно брать из заголовка, если сервер отдает
+    const disposition = response.headers.get('Content-Disposition');
+    let filename = 'document.docx';
+
+    if (disposition && disposition.includes('filename=')) {
+      filename = disposition.split('filename=')[1].replace(/"/g, '');
+    }
+
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleContinueEditing = () => {
     setIsChatEnded(false);
@@ -226,29 +248,13 @@ const ChatPage = () => {
         </div>
 
         {/* Секция готового документа */}
-        {isChatEnded && documentData && (
+        {isChatEnded && (
           <div className="document-section">
             <div className="document-card">
               <div className="document-header">
                 <div className="document-icon">🎉</div>
                 <div className="document-info">
                   <h3>Ваш документ готов!</h3>
-                  <p>{documentData.title}</p>
-                </div>
-              </div>
-              
-              <div className="document-details">
-                <div className="detail-item">
-                  <span className="label">Тип документа:</span>
-                  <span className="value">{documentData.type}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="label">Адресат:</span>
-                  <span className="value">{documentData.recipient}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="label">Дата создания:</span>
-                  <span className="value">{documentData.date}</span>
                 </div>
               </div>
 
@@ -260,20 +266,6 @@ const ChatPage = () => {
                   className="action-btn"
                 >
                   📥 Скачать DOCX
-                </Button>
-                <Button 
-                  variant="secondary"
-                  onClick={handleContinueEditing}
-                  className="action-btn"
-                >
-                  ✏️ Продолжить редактирование
-                </Button>
-                <Button 
-                  variant="text"
-                  onClick={() => navigate('/account')}
-                  className="action-btn"
-                >
-                  💾 Сохранить в профиль
                 </Button>
               </div>
             </div>

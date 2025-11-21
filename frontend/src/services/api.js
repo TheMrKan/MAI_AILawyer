@@ -35,8 +35,8 @@ export const issueAPI = {
   async createIssue(description) {
     try {
       // Временно генерируем случайный ID, пока бэкенд не реализует создание ЕГорррррр
-      const issueId = Math.floor(Math.random() * 1000) + 1;
-      return { issue_id: issueId };
+      const response = await api.post("/issue/create/", { "text": description });
+      return { issue_id: response.data["issue_id"] };
     } catch (error) {
       console.error('Error creating issue:', error);
       throw error;

@@ -24,11 +24,11 @@ async def get_current_user(
         token = authorization[7:]
 
     if not token:
-        None
+        return None
 
     token_data = auth_service.verify_token(token)
     if not token_data:
-        None
+        return None
 
     user_repo = UserRepository(db)
     user = await user_repo.get_by_id(token_data.user_id)

@@ -61,7 +61,7 @@ async def get_issue_messages(
         raise HTTPException(status_code=500, detail="Failed to get messages")
 
 
-@router.post('/create')
+@router.post('/create/')
 async def create_issue(
         issue_data: IssueCreateRequestSchema,
         provider: Annotated[Provider, Depends(Provider)],
@@ -71,7 +71,7 @@ async def create_issue(
     try:
         issue_service = IssueService(db)
 
-        new_issue = await issue_service.create_issue(issue_data.text, current_user.id)
+        new_issue = await issue_service.create_issue(issue_data.text, current_user.id if current_user else None)
         chat_service = provider[IssueChatService]
         await chat_service.process_new_user_message(new_issue.id, issue_data.text)
         logger.info(f"Graph started for issue {new_issue.id}")

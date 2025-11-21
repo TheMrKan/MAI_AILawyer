@@ -25,27 +25,41 @@ const ChatPage = () => {
     scrollToBottom();
   }, [messages]);
 
-  const hasSentInitial = useRef(false);
+  let loadCalled = false;
 
+  useEffect(() => {
+  loadChat();
+    }, []); // вызывается один раз
 
-  const sendMessage = async (text) => {
-    if (!text.trim() || isLoading) return;
+  const loadChat = () => {
+      if (loadCalled) {
+          return;
+      }
+      loadCalled = true;
+      try {
+          issueAPI.getChatHistory(requestId).then((history) => {
+              console.log(history);
+              const newMessages = history.new_messages.map(msg => ({
+                  id: Date.now() + Math.random(),
+                  text: msg.text,
+                  sender: msg.role === 'user' ? 'user' : 'ai',
+                  timestamp: new Date()
+                }));
 
-    setIsLoading(true);
+                setMessages(prev => [...prev, ...newMessages]);
+                setIsChatEnded(history.is_ended);
+          });
 
-    try {
-      const response = await issueAPI.sendMessage(requestId, text);
-      processApiResponse(response);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      addErrorMessage();
-    } finally {
-      setIsLoading(false);
+      }
+    catch (error) {
+          console.log(error);
     }
+
   };
 
   const processApiResponse = (response) => {
-    const newMessages = response.new_messages.map(msg => ({
+      const messagesToAdd = response.new_messages.slice(1);
+    const newMessages = messagesToAdd.map(msg => ({
       id: Date.now() + Math.random(),
       text: msg.text,
       sender: msg.role === 'user' ? 'user' : 'ai',
@@ -69,17 +83,6 @@ const ChatPage = () => {
       timestamp: new Date()
     };
     setMessages(prev => [...prev, errorMessage]);
-  };
-
-  const prepareDocumentData = () => {
-    // Временные данные документа
-    setDocumentData({
-      title: 'Претензия о возврате денежных средств',
-      type: 'Жалоба',
-      recipient: 'Магазин "Электроник"',
-      date: new Date().toLocaleDateString('ru-RU'),
-      content: 'Полный текст сгенерированного документа будет здесь...'
-    });
   };
 
   const handleSendMessage = async (e) => {

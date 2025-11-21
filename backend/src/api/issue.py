@@ -29,16 +29,15 @@ router = APIRouter(prefix="/issue")
 def __should_message_be_returned(dto: ChatMessage) -> bool:
     return dto.role in (DtoMessageRole.USER, DtoMessageRole.AI)
 
-@router.get('/{issue_id}/')
+@router.get('/{issue_id}/chat/')
 async def get_issue_messages(
         issue_id: int,
         provider: Annotated[Provider, Depends(Provider)],
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(get_current_user)
 ) -> ChatUpdateSchema:
     try:
         issue_service = IssueService(db)
-        issue = await issue_service.get_issue_by_id(issue_id, current_user.id)
+        issue = await issue_service.get_issue_by_id(issue_id)
 
         if not issue:
             raise HTTPException(status_code=404, detail="Issue not found")

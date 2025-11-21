@@ -54,22 +54,12 @@ export const issueAPI = {
     }
   },
 
-  // Проверка статуса issue
-  async getIssueStatus(issueId) {
-    try {
-      // Временная заглушка
-      return { is_ended: false };
-    } catch (error) {
-      console.error('Error getting issue status:', error);
-      throw error;
-    }
-  },
-
   // Получение истории сообщений
   async getChatHistory(issueId) {
     try {
       // Временная заглушка
-      return { messages: [] };
+      const response = await api.get(`/issue/${issueId}/chat/`, {  });
+      return response.data;
     } catch (error) {
       console.error('Error getting chat history:', error);
       throw error;

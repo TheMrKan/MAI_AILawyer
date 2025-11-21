@@ -43,7 +43,7 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
             ChatMessage.from_ai("Какое значение этого поля?")
         ]
 
-        return {"messages": new_messages}
+        return {"messages": state["messages"] + new_messages}
 
     def __process_answer(self, state: StrictTemplateState) -> StrictTemplateState:
         user_input = interrupt(None)
@@ -55,6 +55,6 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
 
         if "достаточно" in user_message.text.lower():
             self.__logger.debug("Completing loop with fields %s", fields)
-            return {"messages": [user_message], "fields": fields, "loop_completed": True}
+            return {"messages": [*state["messages"], user_message], "fields": fields, "loop_completed": True}
 
-        return {"messages": [user_message], "fields": fields}
+        return {"messages": [*state["messages"], user_message], "fields": fields}

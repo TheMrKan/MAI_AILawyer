@@ -45,4 +45,4 @@ class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]
         relevant = state["templates"][result.relevant_template_index] if result.relevant_template_index is not None else None
 
         self.__logger.info("Selected relevant template: %s", relevant)
-        return {"relevant_template": relevant, "messages": [result.user_message]}
+        return {"relevant_template": relevant, "messages": [*state["messages"], result.user_message]}

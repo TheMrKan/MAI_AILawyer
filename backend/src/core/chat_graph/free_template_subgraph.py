@@ -50,7 +50,7 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
         free_template = await service.get_free_template_async()
         text = file_service.extract_text(free_template)
 
-        return {"messages": llm_use_cases.setup_free_template_loop(free_template, text), "relevant_template": free_template}
+        return {"messages": state["messages"] + llm_use_cases.setup_free_template_loop(free_template, text), "relevant_template": free_template}
 
     @inject_global
     async def __invoke_llm(self, state: FreeTemplateState, llm: LLMABC) -> FreeTemplateState:
@@ -59,14 +59,14 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
         if is_ready:
             return {"loop_completed": True}
 
-        return {"messages": [message]}
+        return {"messages": [*state["messages"], message]}
 
     def __handle_answer(self, state: FreeTemplateState) -> FreeTemplateState:
         user_input = interrupt(None)
         user_message = ChatMessage.from_user(user_input)
         self.__logger.debug("Got user answer: %s", user_input)
 
-        return {"messages": [user_message]}
+        return {"messages": [*state["messages"], user_message]}
 
     @inject_global
     async def __prepare_field_values(self, state: FreeTemplateState, llm: LLMABC) -> FreeTemplateState:
@@ -87,4 +87,4 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
             file_service.fill_with_values(state["relevant_template"], state["field_values"], result_file)
 
         self.__logger.debug("Document generated")
-        return {"messages": [ChatMessage.from_ai("Ваш документ готов!\nСпасибо, что воспользовались нашим сервисом!")]}
+        return {"messages": [*state["messages"], ChatMessage.from_ai("Ваш документ готов!\nСпасибо, что воспользовались нашим сервисом!")]}

@@ -10,20 +10,12 @@ from src.dto.laws import LawFragment
 from src.core.templates.types import Template
 
 
-def _add_messages_to_state(left: list[ChatMessage], right: list[ChatMessage] | ChatMessage) -> list[ChatMessage]:
-    if isinstance(right, ChatMessage):
-        return left + [right]
-
-    return left + right
-
-
 class InputState(TypedDict, total=False):
     first_description: str
 
 
 class BaseState(InputState, total=False):
-    # Annotated и add_messages обеспечивает добавление новых сообщений в конец списка, вместо перезаписи всего списка
-    messages: Annotated[list[ChatMessage], _add_messages_to_state]
+    messages: list[ChatMessage]
     first_info_completed: bool
     law_docs: list[LawFragment]
     can_help: bool
@@ -50,6 +42,6 @@ def create_process_confirmation_node(write_to: str, logger: logging.Logger):
         user_message = ChatMessage.from_user(user_input)
         is_confirmed = await llm_use_cases.is_agreement_async(llm, user_message)
         logger.info(f"Got user confirmation input (for {write_to}) ({is_confirmed}): {user_input}")
-        return {write_to: is_confirmed, "messages": [ChatMessage.from_user(user_input)]}
+        return {write_to: is_confirmed, "messages": [*state["messages"], ChatMessage.from_user(user_input)]}
 
     return _internal

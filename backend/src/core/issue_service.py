@@ -7,7 +7,7 @@ class IssueService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create_issue(self, text: str, user_id: str) -> Issue:
+    async def create_issue(self, text: str, user_id: str | None) -> Issue:
         new_issue = Issue(
             text=text,
             user_id=user_id

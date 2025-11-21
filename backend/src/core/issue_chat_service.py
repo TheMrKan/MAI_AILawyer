@@ -54,7 +54,11 @@ class IssueChatService:
             skip_messages = len(history)
 
         result = await self.graph.ainvoke(graph_input, graph_config, subgraphs=True)
-        return result["messages"][skip_messages:]
+
+        if result["messages"][0].role.value == "system":
+            return result["messages"][skip_messages:]
+
+        return result["messages"]
 
     async def is_ended(self, issue_id: int) -> bool:
         graph_config = {"configurable": {"thread_id": issue_id}}

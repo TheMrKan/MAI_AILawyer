@@ -41,10 +41,14 @@ async def google_callback(
         db: AsyncSession = Depends(get_db),
 ):
     if error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"OAuth error: {error}"
-        )
+        if hasattr(settings, 'FRONTEND_URL') and settings.FRONTEND_URL:
+            redirect_url = f"{settings.FRONTEND_URL}/auth/callback?error=auth_failed"
+            return RedirectResponse(url=redirect_url)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"OAuth error: {error}"
+            )
 
     if not code or not state:
         raise HTTPException(
@@ -82,7 +86,7 @@ async def google_callback(
             import urllib.parse
             import json
             user_data_encoded = urllib.parse.quote(json.dumps(response_data))
-            redirect_url = f"{settings.FRONTEND_URL}/auth/success?data={user_data_encoded}"
+            redirect_url = f"{settings.FRONTEND_URL}/auth/callback?data={user_data_encoded}"
             response = RedirectResponse(url=redirect_url)
         else:
             response = response_data

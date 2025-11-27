@@ -1,34 +1,81 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar/Navbar';
 import Footer from '../../components/Footer/Footer';
 import Button from '../../components/Button/Button';
 import Modal from '../../components/Modal/Modal';
-import { issueAPI } from '../../services/api';
+import { issueAPI, userAPI } from '../../services/api';
 import './HomePage.scss';
 
 const HomePage = () => {
   const [problemDescription, setProblemDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [currentUser] = useState({
-    isAuthenticated: true, 
-    // временно true для теста
-    name: 'Иван Иванов'
-  });
-  
+  const [currentUser, setCurrentUser] = useState(null);
+
   const navigate = useNavigate();
+
+  // Проверяем авторизацию при загрузке и обновляем состояние
+  useEffect(() => {
+    const checkAuth = () => {
+      const user = localStorage.getItem('user');
+      if (user) {
+        try {
+          setCurrentUser(JSON.parse(user));
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          localStorage.removeItem('user');
+          localStorage.removeItem('auth_token');
+        }
+      }
+    };
+
+    // Проверяем авторизацию при загрузке
+    checkAuth();
+
+    // Слушаем события изменения localStorage (для обновления при авторизации из других вкладок)
+    window.addEventListener('storage', checkAuth);
+
+    return () => {
+      window.removeEventListener('storage', checkAuth);
+    };
+  }, []);
+
+  // Обработчик для обновления при возврате на страницу
+  useEffect(() => {
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        const user = localStorage.getItem('user');
+        if (user) {
+          setCurrentUser(JSON.parse(user));
+        }
+      }
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+    };
+  }, []);
+
+  // Проверяем авторизацию при каждом рендере (на случай если пользователь авторизовался в другой вкладке)
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user && !currentUser) {
+      setCurrentUser(JSON.parse(user));
+    }
+  }, [currentUser]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!problemDescription.trim()) {
       alert('Пожалуйста, опишите вашу проблему');
       return;
     }
 
     // Если пользователь не авторизован, показываем модалку
-    if (!currentUser.isAuthenticated) {
+    if (!currentUser) {
       setShowAuthModal(true);
       return;
     }
@@ -40,7 +87,17 @@ const HomePage = () => {
       navigate(`/chat/${response.issue_id}`);
     } catch (error) {
       console.error('Error creating issue:', error);
-      alert('Произошла ошибка при создании запроса. Пожалуйста, попробуйте снова.');
+
+      // Если ошибка авторизации, разлогиниваем и просим авторизоваться снова
+      if (error.message.includes('401') || error.message.includes('токен')) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        setCurrentUser(null);
+        setShowAuthModal(true);
+        alert('Сессия истекла. Пожалуйста, войдите снова.');
+      } else {
+        alert('Произошла ошибка при создании запроса. Пожалуйста, попробуйте снова.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -48,6 +105,15 @@ const HomePage = () => {
 
   const handleQuickStart = (example) => {
     setProblemDescription(example);
+  };
+
+  const handleGoogleAuth = () => {
+    userAPI.googleAuth();
+  };
+
+  const handleLogout = () => {
+    userAPI.logout();
+    setCurrentUser(null);
   };
 
   const quickExamples = [
@@ -70,8 +136,8 @@ const HomePage = () => {
 
   return (
     <div className="home-page">
-      <Navbar />
-      
+      <Navbar currentUser={currentUser} onLogout={handleLogout} />
+
       <main className="main-content">
         {/* Hero Section */}
         <section className="hero-section">
@@ -81,14 +147,37 @@ const HomePage = () => {
                 Создайте юридически грамотное обращение за минуты
               </h1>
               <p className="hero-subtitle">
-                AI-помощник анализирует вашу проблему и генерирует готовые документы 
+                AI-помощник анализирует вашу проблему и генерирует готовые документы
                 для обращения в государственные органы и организации
               </p>
-              
-              
+
+              {currentUser && (
+                <div className="user-welcome">
+                  <p>Добро пожаловать, {currentUser.first_name || currentUser.email}!</p>
+                </div>
+              )}
+
+              <div className="hero-stats">
+                <div className="stat">
+                  <div className="stat-number">500+</div>
+                  <div className="stat-label">Успешных обращений</div>
+                </div>
+                <div className="stat">
+                  <div className="stat-number">95%</div>
+                  <div className="stat-label">Положительных решений</div>
+                </div>
+                <div className="stat">
+                  <div className="stat-number">2-3 мин</div>
+                  <div className="stat-label">Среднее время генерации</div>
+                </div>
+              </div>
             </div>
-            
+
             <div className="hero-visual">
+              <div className="floating-card card-1">
+                <div className="card-icon">⚖️</div>
+                <p>Юридические консультации</p>
+              </div>
               <div className="floating-card card-2">
                 <div className="card-icon">🏛️</div>
                 <p>Исковые заявления</p>
@@ -107,6 +196,11 @@ const HomePage = () => {
             <div className="section-header">
               <h2>Опишите вашу проблему</h2>
               <p>AI-помощник проанализирует ситуацию и предложит решение</p>
+              {!currentUser && (
+                <div className="auth-notice">
+                  <span>⚠️ Для создания документов требуется авторизация</span>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="problem-form">
@@ -121,15 +215,15 @@ const HomePage = () => {
                   placeholder="Например: 'Меня принуждают к переработкам без соответствующей компенсации, какую жалобу написать на начальника????'"
                   className="problem-textarea"
                   rows="8"
-                  disabled={isLoading}
+                  disabled={isLoading || !currentUser}
                 />
                 <div className="textarea-footer">
                   <span className="char-count">
                     {problemDescription.length} символов
                   </span>
                   <div className="textarea-actions">
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className="clear-btn"
                       onClick={() => setProblemDescription('')}
                       disabled={!problemDescription.trim()}
@@ -139,18 +233,50 @@ const HomePage = () => {
                   </div>
                 </div>
               </div>
-              
-              <Button 
-                type="submit" 
-                loading={isLoading}
-                disabled={isLoading || !problemDescription.trim()}
-                className="submit-button"
-              >
-                {isLoading ? 'Обработка...' : 'Создать документ'}
-              </Button>
+
+              {currentUser ? (
+                <Button
+                  type="submit"
+                  loading={isLoading}
+                  disabled={isLoading || !problemDescription.trim()}
+                  className="submit-button"
+                >
+                  {isLoading ? 'Обработка...' : 'Создать документ'}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => setShowAuthModal(true)}
+                  className="submit-button"
+                >
+                  Войти для создания документа
+                </Button>
+              )}
             </form>
 
-            
+            {/* Quick Examples */}
+            <div className="quick-examples">
+              <h3>Примеры быстрого старта:</h3>
+              <div className="examples-grid">
+                {quickExamples.map((example, index) => (
+                  <div
+                    key={index}
+                    className="example-card"
+                    onClick={() => handleQuickStart(example.example)}
+                  >
+                    <div className="example-icon">
+                      {index === 0 ? '🛒' : index === 1 ? '🔧' : '🏠'}
+                    </div>
+                    <h4>{example.title}</h4>
+                    <p>{example.description}</p>
+                    <Button variant="text" size="small">
+                      Использовать пример →
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
@@ -173,14 +299,26 @@ const HomePage = () => {
                 <h3>Юридически грамотно</h3>
                 <p>Все документы соответствуют актуальному законодательству РФ</p>
               </div>
-              
+              <div className="feature-card">
+                <div className="feature-icon">🎯</div>
+                <h3>Точно</h3>
+                <p>Умный AI понимает контекст и подбирает оптимальное решение</p>
+              </div>
               <div className="feature-card">
                 <div className="feature-icon">🛡️</div>
                 <h3>Безопасно</h3>
                 <p>Ваши данные защищены и не передаются третьим лицам</p>
               </div>
-              
-             
+              <div className="feature-card">
+                <div className="feature-icon">💼</div>
+                <h3>Профессионально</h3>
+                <p>Документы готовы к отправке в государственные органы</p>
+              </div>
+              <div className="feature-card">
+                <div className="feature-icon">📱</div>
+                <h3>Удобно</h3>
+                <p>Работайте с любого устройства в любое время</p>
+              </div>
             </div>
           </div>
         </section>
@@ -237,15 +375,15 @@ const HomePage = () => {
         size="small"
       >
         <div className="auth-modal-content">
-          <p>Для создания документов необходимо войти в систему</p>
+          <p>Для создания документов необходимо войти в систему через Google</p>
           <div className="auth-modal-actions">
-            <Button 
+            <Button
               variant="primary"
-              onClick={() => navigate('/signin')}
+              onClick={handleGoogleAuth}
             >
-              Войти
+              Войти через Google
             </Button>
-            <Button 
+            <Button
               variant="text"
               onClick={() => setShowAuthModal(false)}
             >

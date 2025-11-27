@@ -5,8 +5,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-Base = declarative_base()
-
 from src.database.models import User
 
 database_url = settings.DATABASE_URL
@@ -35,5 +33,6 @@ async def get_db() -> AsyncSession:
 
 async def create_tables():
     async with engine.begin() as conn:
+        from src.database.base import Base
         await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables created successfully")

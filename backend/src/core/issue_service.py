@@ -21,11 +21,10 @@ class IssueService:
         await self.db.refresh(issue)
         return issue
 
-    async def get_issue_by_id(self, issue_id: int, user_id: str) -> Optional[Issue]:
+    async def get_issue_by_id(self, issue_id: int) -> Optional[Issue]:
         result = await self.db.execute(
             select(Issue).where(
-                Issue.id == issue_id,
-                Issue.user_id == user_id
+                Issue.id == issue_id
             )
         )
         return result.scalar_one_or_none()

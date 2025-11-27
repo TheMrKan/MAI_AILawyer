@@ -33,42 +33,53 @@ api.interceptors.response.use(
     }
 
     if (error.response) {
+      // Сервер от ветил  с ошибкой пример
       const message = error.response.data?.detail || 'Произошла ошибка сервера';
       throw new Error(message);
     } else if (error.request) {
+      // Запрос был сделан, но ответ не получен  пример
       throw new Error('Не удалось подключиться к серверу. Проверьте подключение к интернету.');
     } else {
+      // Что-то по шло не так при настройке з апроса
       throw new Error('Произошла непредвиденная ошибка');
     }
   }
 );
 
 export const issueAPI = {
+  // новый issue
   async createIssue(description) {
-    const response = await api.post('/issue/create', { text: description });
-    return response.data;
+    try {
+      // Временно генерируем случайный ID, пока бэкенд не реализует создание ЕГорррррр
+      const response = await api.post("/issue/create/", { "text": description });
+      return { issue_id: response.data["issue_id"] };
+    } catch (error) {
+      console.error('Error creating issue:', error);
+      throw error;
+    }
   },
 
+  // Отправка сообщения в чат
   async sendMessage(issueId, text) {
-    const response = await api.post(`/issue/chat/${issueId}/`, { text });
-    return response.data;
+    try {
+      const response = await api.post(`/issue/${issueId}/chat/`, { text });
+      return response.data;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
   },
 
-  async getIssueStatus(issueId) {
-    const response = await api.get(`/issue/${issueId}/`);
-    return response.data;
-  },
-
+  // Получение истории сообщений
   async getChatHistory(issueId) {
-    const response = await api.get(`/issue/${issueId}/`);
-    return response.data;
-  },
-
-  async downloadDocument(issueId) {
-    const response = await api.get(`/issue/${issueId}/download/`, {
-      responseType: 'blob'
-    });
-    return response.data;
+    try {
+      // Временная заглушка
+      const response = await api.get(`/issue/${issueId}/chat/`, {  });
+      return response.data;
+    } catch (error) {
+      console.error('Error getting chat history:', error);
+      throw error;
+    }
   }
 };
 

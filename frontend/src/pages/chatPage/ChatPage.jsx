@@ -25,27 +25,43 @@ const ChatPage = () => {
     scrollToBottom();
   }, [messages]);
 
-  const hasSentInitial = useRef(false);
+  let loadCalled = false;
 
+  useEffect(() => {
+  loadChat();
+    }, []); // вызывается один раз
 
-  const sendMessage = async (text) => {
-    if (!text.trim() || isLoading) return;
+  const loadChat = () => {
+      if (!loadCalled) {
+          loadCalled = true;
+          return;
+      }
 
-    setIsLoading(true);
+      try {
+          issueAPI.getChatHistory(requestId).then((history) => {
+              console.log(history);
+              const newMessages = history.new_messages.map(msg => ({
+                  id: Date.now() + Math.random(),
+                  text: msg.text,
+                  sender: msg.role === 'user' ? 'user' : 'ai',
+                  timestamp: new Date()
+                }));
 
-    try {
-      const response = await issueAPI.sendMessage(requestId, text);
-      processApiResponse(response);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      addErrorMessage();
-    } finally {
-      setIsLoading(false);
+                setMessages(prev => [...prev, ...newMessages]);
+                console.log("Set is chat ended")
+                setIsChatEnded(history.is_ended);
+          });
+
+      }
+    catch (error) {
+          console.log(error);
     }
+
   };
 
   const processApiResponse = (response) => {
-    const newMessages = response.new_messages.map(msg => ({
+      const messagesToAdd = response.new_messages.slice(1);
+    const newMessages = messagesToAdd.map(msg => ({
       id: Date.now() + Math.random(),
       text: msg.text,
       sender: msg.role === 'user' ? 'user' : 'ai',
@@ -54,11 +70,6 @@ const ChatPage = () => {
 
     setMessages(prev => [...prev, ...newMessages]);
     setIsChatEnded(response.is_ended);
-
-    
-    if (response.is_ended) {
-      prepareDocumentData();
-    }
   };
 
   const addErrorMessage = () => {
@@ -69,17 +80,6 @@ const ChatPage = () => {
       timestamp: new Date()
     };
     setMessages(prev => [...prev, errorMessage]);
-  };
-
-  const prepareDocumentData = () => {
-    // Временные данные документа
-    setDocumentData({
-      title: 'Претензия о возврате денежных средств',
-      type: 'Жалоба',
-      recipient: 'Магазин "Электроник"',
-      date: new Date().toLocaleDateString('ru-RU'),
-      content: 'Полный текст сгенерированного документа будет здесь...'
-    });
   };
 
   const handleSendMessage = async (e) => {
@@ -109,23 +109,48 @@ const ChatPage = () => {
 };
 
 
-  const handleDownloadDocument = () => {
-    if (!documentData) return;
 
-    setIsLoading(true);
-    
-    // Имитация загрузки документа
-    setTimeout(() => {
-      const element = document.createElement('a');
-      const file = new Blob([documentData.content], { type: 'text/plain' });
-      element.href = URL.createObjectURL(file);
-      element.download = `${documentData.title.toLowerCase().replace(/\s+/g, '_')}.docx`;
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-      setIsLoading(false);
-    }, 2000);
-  };
+  const handleDownloadDocument = async () => {
+  setIsLoading(true);
+
+  try {
+    const response = await fetch(`http://localhost:8000/issue/${requestId}/download/`, {
+      method: 'GET',
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      throw new Error('Ошибка загрузки документа');
+    }
+
+    const blob = await response.blob();
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    // имя можно брать из заголовка, если сервер отдает
+    const disposition = response.headers.get('Content-Disposition');
+    let filename = 'document.docx';
+
+    if (disposition && disposition.includes('filename=')) {
+      filename = disposition.split('filename=')[1].replace(/"/g, '');
+    }
+
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleContinueEditing = () => {
     setIsChatEnded(false);
@@ -223,29 +248,13 @@ const ChatPage = () => {
         </div>
 
         {/* Секция готового документа */}
-        {isChatEnded && documentData && (
+        {isChatEnded && (
           <div className="document-section">
             <div className="document-card">
               <div className="document-header">
                 <div className="document-icon">🎉</div>
                 <div className="document-info">
                   <h3>Ваш документ готов!</h3>
-                  <p>{documentData.title}</p>
-                </div>
-              </div>
-              
-              <div className="document-details">
-                <div className="detail-item">
-                  <span className="label">Тип документа:</span>
-                  <span className="value">{documentData.type}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="label">Адресат:</span>
-                  <span className="value">{documentData.recipient}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="label">Дата создания:</span>
-                  <span className="value">{documentData.date}</span>
                 </div>
               </div>
 
@@ -257,20 +266,6 @@ const ChatPage = () => {
                   className="action-btn"
                 >
                   📥 Скачать DOCX
-                </Button>
-                <Button 
-                  variant="secondary"
-                  onClick={handleContinueEditing}
-                  className="action-btn"
-                >
-                  ✏️ Продолжить редактирование
-                </Button>
-                <Button 
-                  variant="text"
-                  onClick={() => navigate('/account')}
-                  className="action-btn"
-                >
-                  💾 Сохранить в профиль
                 </Button>
               </div>
             </div>

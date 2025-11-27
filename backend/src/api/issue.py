@@ -20,6 +20,7 @@ from src.api.issue_schemas import (
     AddUserMessageSchema
 )
 from src.core.issue_service import IssueService
+from src.database.models import Issue
 
 
 logger = logging.getLogger(__name__)
@@ -29,16 +30,15 @@ router = APIRouter(prefix="/issue")
 def __should_message_be_returned(dto: ChatMessage) -> bool:
     return dto.role in (DtoMessageRole.USER, DtoMessageRole.AI)
 
-@router.get('/{issue_id}/')
+@router.get('/{issue_id}/chat/')
 async def get_issue_messages(
         issue_id: int,
         provider: Annotated[Provider, Depends(Provider)],
         db: AsyncSession = Depends(get_db),
-        current_user=Depends(get_current_user)
 ) -> ChatUpdateSchema:
     try:
         issue_service = IssueService(db)
-        issue = await issue_service.get_issue_by_id(issue_id, current_user.id)
+        issue = await issue_service.get_issue_by_id(issue_id)
 
         if not issue:
             raise HTTPException(status_code=404, detail="Issue not found")
@@ -61,7 +61,7 @@ async def get_issue_messages(
         raise HTTPException(status_code=500, detail="Failed to get messages")
 
 
-@router.post('/create')
+@router.post('/create/')
 async def create_issue(
         issue_data: IssueCreateRequestSchema,
         provider: Annotated[Provider, Depends(Provider)],
@@ -71,7 +71,7 @@ async def create_issue(
     try:
         issue_service = IssueService(db)
 
-        new_issue = await issue_service.create_issue(issue_data.text, current_user.id)
+        new_issue = await issue_service.create_issue(issue_data.text, current_user.id if current_user else None)
         chat_service = provider[IssueChatService]
         await chat_service.process_new_user_message(new_issue.id, issue_data.text)
         logger.info(f"Graph started for issue {new_issue.id}")
@@ -129,10 +129,10 @@ async def download_issue_file(
         if not issue:
             raise HTTPException(status_code=404, detail="Issue not found")
 
-        if issue.user_id != current_user.id:
+        if current_user is not None and issue.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Access denied")
 
-        with storage.read_issue_result_file(str(issue_id)) as file:
+        with storage.read_issue_result_file("123") as file:
             file_content = file.read()
 
         return StreamingResponse(

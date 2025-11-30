@@ -43,13 +43,6 @@ const AboutPage = () => {
     },
   ];
 
-  const milestones = [
-    { year: '2025', event: 'Начало разработки платформы' },
-    { year: '2026', event: 'Запуск бета-версии' },
-    { year: '2026', event: '500+ успешных обращений' },
-    { year: '2027', event: 'Планы: мобильное приложение' }
-  ];
-
   return (
     <div className="about-page">
       <Navbar />
@@ -137,7 +130,7 @@ const AboutPage = () => {
                 <div className="step-number">2</div>
                 <div className="step-content">
                   <h3>Подбор законов</h3>
-                  <p>Система находит relevantные нормативные акты</p>
+                  <p>Система находит подходящие нормативные акты</p>
                 </div>
               </div>
               <div className="process-step">

@@ -127,60 +127,6 @@ const AccountPage = () => {
           </Button>
         </div>
 
-        {/* Статистика */}
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon">📄</div>
-            <div className="stat-content">
-              <div className="stat-number">0</div>
-              <div className="stat-label">Всего документов</div>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon">✅</div>
-            <div className="stat-content">
-              <div className="stat-number">0</div>
-              <div className="stat-label">Завершено</div>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon">📝</div>
-            <div className="stat-content">
-              <div className="stat-number">0</div>
-              <div className="stat-label">Черновики</div>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon">⏳</div>
-            <div className="stat-content">
-              <div className="stat-number">0</div>
-              <div className="stat-label">В работе</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Навигация по табам */}
-        <div className="tabs-navigation">
-          <button
-            className={`tab-btn ${activeTab === 'documents' ? 'active' : ''}`}
-            onClick={() => setActiveTab('documents')}
-          >
-            📋 Мои документы
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'activity' ? 'active' : ''}`}
-            onClick={() => setActiveTab('activity')}
-          >
-            📊 Активность
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-          >
-            ⚙️ Настройки
-          </button>
-        </div>
-
         {/* Контент табов */}
         <div className="tab-content">
           {activeTab === 'documents' && (
@@ -250,34 +196,7 @@ const AccountPage = () => {
             </div>
           )}
 
-          {activeTab === 'activity' && (
-            <div className="activity-section">
-              <h2>История активности</h2>
-              <div className="activity-list">
-                <div className="activity-item">
-                  <div className="activity-icon">📄</div>
-                  <div className="activity-content">
-                    <p>Вы создали новый документ "Претензия о возврате денежных средств"</p>
-                    <span className="activity-time">15 января 2024, 14:30</span>
-                  </div>
-                </div>
-                <div className="activity-item">
-                  <div className="activity-icon">✅</div>
-                  <div className="activity-content">
-                    <p>Документ "Заявление в Роспотребнадзор" успешно сгенерирован</p>
-                    <span className="activity-time">10 января 2024, 11:15</span>
-                  </div>
-                </div>
-                <div className="activity-item">
-                  <div className="activity-icon">🔔</div>
-                  <div className="activity-content">
-                    <p>Вы зарегистрировались в системе</p>
-                    <span className="activity-time">1 января 2024, 10:00</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          
 
           {activeTab === 'settings' && (
             <div className="settings-section">

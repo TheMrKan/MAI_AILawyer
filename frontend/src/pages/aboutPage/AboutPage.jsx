@@ -222,24 +222,7 @@ const AboutPage = () => {
           </div>
         </section>
 
-        {/* Timeline Section */}
-        <section className="timeline-section">
-          <div className="container">
-            <h2>Наш путь</h2>
-            <div className="timeline">
-              {milestones.map((milestone, index) => (
-                <div key={index} className="timeline-item">
-                  <div className="timeline-year">{milestone.year}</div>
-                  <div className="timeline-content">
-                    <div className="timeline-dot"></div>
-                    <p>{milestone.event}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
+        
         {/* CTA Section */}
         <section className="cta-section">
           <div className="container">

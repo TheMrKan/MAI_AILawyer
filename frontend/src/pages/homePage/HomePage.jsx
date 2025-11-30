@@ -151,21 +151,7 @@ const HomePage = () => {
                 для обращения в государственные органы и организации
               </p>
 
-              {currentUser && (
-                <div className="user-welcome">
-                  <p>Добро пожаловать, {currentUser.first_name || currentUser.email}!</p>
-                </div>
-              )}
-
               <div className="hero-stats">
-                <div className="stat">
-                  <div className="stat-number">500+</div>
-                  <div className="stat-label">Успешных обращений</div>
-                </div>
-                <div className="stat">
-                  <div className="stat-number">95%</div>
-                  <div className="stat-label">Положительных решений</div>
-                </div>
                 <div className="stat">
                   <div className="stat-number">2-3 мин</div>
                   <div className="stat-label">Среднее время генерации</div>
@@ -178,10 +164,7 @@ const HomePage = () => {
                 <div className="card-icon">⚖️</div>
                 <p>Юридические консультации</p>
               </div>
-              <div className="floating-card card-2">
-                <div className="card-icon">🏛️</div>
-                <p>Исковые заявления</p>
-              </div>
+              
               <div className="floating-card card-3">
                 <div className="card-icon">📝</div>
                 <p>Претензии организациям</p>
@@ -255,28 +238,7 @@ const HomePage = () => {
               )}
             </form>
 
-            {/* Quick Examples */}
-            <div className="quick-examples">
-              <h3>Примеры быстрого старта:</h3>
-              <div className="examples-grid">
-                {quickExamples.map((example, index) => (
-                  <div
-                    key={index}
-                    className="example-card"
-                    onClick={() => handleQuickStart(example.example)}
-                  >
-                    <div className="example-icon">
-                      {index === 0 ? '🛒' : index === 1 ? '🔧' : '🏠'}
-                    </div>
-                    <h4>{example.title}</h4>
-                    <p>{example.description}</p>
-                    <Button variant="text" size="small">
-                      Использовать пример →
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Quick Examples */}-
           </div>
         </section>
 
@@ -317,7 +279,7 @@ const HomePage = () => {
               <div className="feature-card">
                 <div className="feature-icon">📱</div>
                 <h3>Удобно</h3>
-                <p>Работайте с любого устройства в любое время</p>
+                <p>Общайтесь в свободном формате</p>
               </div>
             </div>
           </div>

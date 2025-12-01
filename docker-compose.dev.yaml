@@ -2,7 +2,6 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: backend
     env_file:
       - ./backend/.env
     environment:
@@ -51,7 +50,7 @@ services:
   chroma:
     image: chromadb/chroma
     volumes:
-      - chroma-data:/data
+      - ./chroma_data:/data
     expose:
       - "8000"
     ports:

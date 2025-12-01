@@ -45,7 +45,7 @@ class IssueChatService:
         skip_messages = 0
 
         if not self.__is_exists(graph_state):
-            graph_input = InputState(first_description=message_text)
+            graph_input = InputState(issue_id=issue_id, first_description=message_text)
         elif self.__is_ended(graph_state):
             raise GraphError("Чат завершен")
         else:

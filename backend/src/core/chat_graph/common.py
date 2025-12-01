@@ -11,6 +11,7 @@ from src.core.templates.types import Template
 
 
 class InputState(TypedDict, total=False):
+    issue_id: int
     first_description: str
 
 

@@ -83,7 +83,7 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
                                   result_storage: IssueResultFileStorageABC) -> FreeTemplateState:
         self.__logger.debug("Generating document...")
 
-        with result_storage.write_issue_result_file("123") as result_file:
+        with result_storage.write_issue_result_file(state["issue_id"]) as result_file:
             file_service.fill_with_values(state["relevant_template"], state["field_values"], result_file)
 
         self.__logger.debug("Document generated")

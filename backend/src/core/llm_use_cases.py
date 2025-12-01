@@ -46,7 +46,7 @@ class InfoAnalysisResult(NamedTuple):
 async def analyze_first_info_async(llm: LLMABC,
                                    chat_history: list[ChatMessage]) -> InfoAnalysisResult:
 
-    ai_response = await llm.invoke_async(messages=chat_history)
+    ai_response = await llm.invoke_async(messages=chat_history + [ChatMessage.from_system("Ответ должен быть строго в формате JSON как в инструкции выше.")])
     # даст исключение, если формат не соблюден
     parsed = json.loads(ai_response.text)
     validated = __InfoAnalysisLLMResponseSchema(**parsed)
@@ -205,6 +205,33 @@ def setup_free_template_loop(free_template: Template, free_template_text: str) -
     ]
 
 
+__STRICT_TEMPLATE_SETUP_TEXT = """
+Теперь ты должен оставить обращение по заданному шаблону. Выше дан текст шаблона. У обращения есть поля, которые тебе нужно заполнить. Ты должен самостоятельно решить, что писать в поля, если это возможно:
+{fields}
+Задавай пользователю вопросы до тех пор, пока информации не будет достаточно для составления текста. Веди с ним диалог.
+Представь, что пользователь вообще ничего не понимает в праве. Твоя задача самому определить, как и куда подавать жалобу/обращение, а у пользователя спрашивать только факты.
+Пользователь не должен принимать решения. Ты должен максимально разгрузить его.
+Не запрашивай персональные данные пользователя, такие как ФИО, email, номер телефона.
+Тебе нельзя узнавать личные данные пользователя.
+ВСЕ ДАЛЬНЕЙШИЕ ОТВЕТЫ ДОЛЖНЫ БЫТЬ СТРОГО В JSON ФОРМАТЕ КАК НИЖЕ.
+Не прекращай использовать этот шаблон до тех пор, пока не вернешь "is_ready" = true. Только со следующего сообщения можно отвечать другим шаблоном.
+"user_message" - это текст вопроса, который нужно задать пользователю.
+"is_ready" - bool флаг, показывающий, достаточно ли сейчас информации. Когда информации будет достаточно, верни "is_ready" = true. Тогда "user_message" оставь пустым.
+{{
+    "user_message": "Вопрос пользователю?",
+    "is_ready": false
+}}
+"""
+
+
+def setup_strict_template_loop(template: Template, template_text: str) -> list[ChatMessage]:
+    rendered_fields = "\n".join(f"{f.key} - {f.agent_instructions}" for f in template.fields.values())
+    return [
+        ChatMessage.from_system(template_text),
+        ChatMessage.from_system(__STRICT_TEMPLATE_SETUP_TEXT.format(fields=rendered_fields))
+    ]
+
+
 class __LoopIterationLLMResponseSchema(BaseModel):
     user_message: str
     is_ready: bool
@@ -241,6 +268,28 @@ async def prepare_free_template_values_async(llm: LLMABC, chat_history: list[Cha
     prompt = [
         *chat_history,
         ChatMessage.from_system(__FREE_TEMPLATE_PREPARE_VALUES_TEXT.format(fields=rendered_fields))
+    ]
+    response = await llm.invoke_async(messages=prompt)
+
+    parsed = json.loads(response.text)
+    return parsed
+
+
+__STRICT_TEMPLATE_PREPARE_VALUES_TEXT = """
+Прекращай возвращать структуру с "user_message" и "is_ready". Возвращай только новую структуру.
+Ты посчитал, что информации достаточно. Теперь определи значения всех полей.
+Ответ дай строго в формате JSON без лишнего текста. Содержимое: "название поля": "значение". В примере еще раз даны все поля и краткие пояснения к ним.
+{{
+{fields}
+}}
+"""
+
+
+async def prepare_strict_template_values_async(llm: LLMABC, chat_history: list[ChatMessage], template: Template) -> dict[str, str]:
+    rendered_fields = "\n".join(f'"{f.key}": "{f.agent_instructions}"' for f in template.fields.values())
+    prompt = [
+        *chat_history,
+        ChatMessage.from_system(__STRICT_TEMPLATE_PREPARE_VALUES_TEXT.format(fields=rendered_fields))
     ]
     response = await llm.invoke_async(messages=prompt)
 

@@ -2,16 +2,20 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
 import logging
 
-from src.core.chat_graph.common import BaseState, StrictTemplateState
+from src.core import llm_use_cases
+from src.core.chat_graph.common import BaseState, StrictTemplateState, FreeTemplateState
+from src.core.llm import LLMABC
+from src.core.results.iface import IssueResultFileStorageABC
+from src.core.templates.file_service import TemplateFileService
 from src.dto.messages import ChatMessage
+from src.application.provider import inject_global
 
 
 class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, StrictTemplateState]):
-
     __logger: logging.Logger
 
     def __init__(self):
-        super().__init__(StrictTemplateState)    # type: ignore
+        super().__init__(BaseState)  # type: ignore
         self.__logger = logging.getLogger(self.__class__.__name__)
 
         self.__build()
@@ -19,42 +23,66 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
     def __build(self):
         self.add_edge(START, "setup_loop")
         self.add_node("setup_loop", self.__setup_loop)
-        self.add_edge("setup_loop", "ask")
+        self.add_edge("setup_loop", "invoke_llm")
 
-        self.add_node("ask", self.__ask)
-        self.add_edge("ask", "process_answer")
-        self.add_node("process_answer", self.__process_answer)
-        self.add_conditional_edges("process_answer", lambda state: state.get("loop_completed", False), {
-            False: "ask",
-            True: END
+        self.add_node("invoke_llm", self.__invoke_llm)
+        self.add_conditional_edges("invoke_llm", lambda state: state.get("loop_completed", False), {
+            False: "get_user_answer",
+            True: "prepare_field_values"
         })
+        self.add_node("get_user_answer", self.__handle_answer)
+        self.add_edge("get_user_answer", "invoke_llm"),
 
-    def __setup_loop(self, state: BaseState) -> StrictTemplateState:
-        self.__logger.debug("Setting up strict QA loop")
-        new_messages = [
-            ChatMessage.from_system("Инструкции и т. д.")
-        ]
+        self.add_node("prepare_field_values", self.__prepare_field_values)
+        self.add_edge("prepare_field_values", "generate_document")
 
-        return {"messages": new_messages}
+        self.add_node("generate_document", self.__generate_document)
 
-    def __ask(self, state: StrictTemplateState) -> StrictTemplateState:
-        new_messages = [
-            ChatMessage.from_system("Задай уточняющий вопрос"),
-            ChatMessage.from_ai("Какое значение этого поля?")
-        ]
+    @inject_global
+    async def __setup_loop(self,
+                           state: BaseState,
+                           file_service: TemplateFileService) -> FreeTemplateState:
+        self.__logger.debug("Setting up QA loop...")
 
-        return {"messages": state["messages"] + new_messages}
+        text = file_service.extract_text(state["relevant_template"])
 
-    def __process_answer(self, state: StrictTemplateState) -> StrictTemplateState:
+        return {"messages": state["messages"] + llm_use_cases.setup_strict_template_loop(state["relevant_template"], text)}
+
+    @inject_global
+    async def __invoke_llm(self, state: FreeTemplateState, llm: LLMABC) -> FreeTemplateState:
+        self.__logger.debug("Asking...")
+        is_ready, message = await llm_use_cases.loop_iteration_async(llm, state["messages"])
+        if is_ready:
+            return {"loop_completed": True}
+
+        return {"messages": [*state["messages"], message]}
+
+    def __handle_answer(self, state: FreeTemplateState) -> FreeTemplateState:
         user_input = interrupt(None)
         user_message = ChatMessage.from_user(user_input)
+        self.__logger.debug("Got user answer: %s", user_input)
 
-        fields = state.setdefault("fields", {})
-        tmp_value = len(tuple(m for m in state["messages"] if m.role == m.role.AI))
-        fields[str(tmp_value)] = user_input
+        return {"messages": [*state["messages"], user_message]}
 
-        if "достаточно" in user_message.text.lower():
-            self.__logger.debug("Completing loop with fields %s", fields)
-            return {"messages": [*state["messages"], user_message], "fields": fields, "loop_completed": True}
+    @inject_global
+    async def __prepare_field_values(self, state: FreeTemplateState, llm: LLMABC) -> FreeTemplateState:
+        self.__logger.debug("Preparing field values...")
+        values = await llm_use_cases.prepare_strict_template_values_async(llm, state["messages"],
+                                                                        state["relevant_template"])
+        self.__logger.debug("Prepared field values: %s", values)
 
-        return {"messages": [*state["messages"], user_message], "fields": fields}
+        return {"field_values": values}
+
+    @inject_global
+    async def __generate_document(self,
+                                  state: FreeTemplateState,
+                                  file_service: TemplateFileService,
+                                  result_storage: IssueResultFileStorageABC) -> FreeTemplateState:
+        self.__logger.debug("Generating document...")
+
+        with result_storage.write_issue_result_file(state["issue_id"]) as result_file:
+            file_service.fill_with_values(state["relevant_template"], state["field_values"], result_file)
+
+        self.__logger.debug("Document generated")
+        return {"messages": [*state["messages"],
+                             ChatMessage.from_ai("Ваш документ готов!\nСпасибо, что воспользовались нашим сервисом!")]}

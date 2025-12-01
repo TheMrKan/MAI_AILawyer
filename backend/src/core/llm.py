@@ -7,5 +7,5 @@ from src.dto.messages import ChatMessage, MessageRole
 class LLMABC(ABC):
 
     @abstractmethod
-    async def invoke_async(self, messages: Iterable[ChatMessage], weak_model: bool = False) -> ChatMessage:
+    async def invoke_async(self, messages: Iterable[ChatMessage], weak_model: bool = False, json_output: bool = False) -> ChatMessage:
         pass

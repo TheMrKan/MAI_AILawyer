@@ -132,7 +132,7 @@ async def download_issue_file(
         if current_user is not None and issue.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Access denied")
 
-        with storage.read_issue_result_file("123") as file:
+        with storage.read_issue_result_file(issue_id) as file:
             file_content = file.read()
 
         return StreamingResponse(

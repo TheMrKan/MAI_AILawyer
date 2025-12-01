@@ -46,7 +46,7 @@ class InfoAnalysisResult(NamedTuple):
 async def analyze_first_info_async(llm: LLMABC,
                                    chat_history: list[ChatMessage]) -> InfoAnalysisResult:
 
-    ai_response = await llm.invoke_async(messages=chat_history + [ChatMessage.from_system("Ответ должен быть строго в формате JSON как в инструкции выше.")])
+    ai_response = await llm.invoke_async(messages=chat_history, json_output=True)
     # даст исключение, если формат не соблюден
     parsed = json.loads(ai_response.text)
     validated = __InfoAnalysisLLMResponseSchema(**parsed)
@@ -108,7 +108,7 @@ async def analyze_acts_async(llm: LLMABC,
     documents_message = ChatMessage.from_ai(__ACTS_MESSAGE_TEMPLATE.format(acts=joined_acts))
 
     prompt = [*chat_history, documents_message, __ACTS_ANALYSIS_MESSAGE]
-    ai_response = await llm.invoke_async(messages=prompt)
+    ai_response = await llm.invoke_async(messages=prompt, json_output=True)
 
     # даст исключение, если формат не соблюден
     parsed = json.loads(ai_response.text)
@@ -161,14 +161,14 @@ class TemplatesAnalysisResult(NamedTuple):
 
 
 async def analyze_templates_async(llm: LLMABC,
-                             chat_history: list[ChatMessage],
-                             template_texts: list[str]) -> TemplatesAnalysisResult:
+                                  chat_history: list[ChatMessage],
+                                  template_texts: list[str]) -> TemplatesAnalysisResult:
     prompt = [*chat_history]
     for text in template_texts:
         prompt.append(ChatMessage.from_system(text))
     prompt.append(__TEMPLATES_ANALYSIS_MESSAGE)
 
-    ai_reponse = await llm.invoke_async(messages=prompt)
+    ai_reponse = await llm.invoke_async(messages=prompt, json_output=True)
     # даст исключение, если формат не соблюден
     parsed = json.loads(ai_reponse.text)
     validated = __TemplatesAnalysisLLMResponseSchema(**parsed)
@@ -242,7 +242,7 @@ async def loop_iteration_async(llm: LLMABC, chat_history: list[ChatMessage]) -> 
         *chat_history,
         ChatMessage.from_system('Ответ должен быть строго в формате JSON как в инструкции. {{"user_message": "Вопрос пользователю?", "is_ready": false}}. Не повторяй вопросы, проверь, что ты не задавал этот вопрос.')
     ]
-    response = await llm.invoke_async(messages=prompt)
+    response = await llm.invoke_async(messages=prompt, json_output=True)
     # даст исключение, если формат не соблюден
     parsed = json.loads(response.text)
     validated = __LoopIterationLLMResponseSchema(**parsed)
@@ -269,7 +269,7 @@ async def prepare_free_template_values_async(llm: LLMABC, chat_history: list[Cha
         *chat_history,
         ChatMessage.from_system(__FREE_TEMPLATE_PREPARE_VALUES_TEXT.format(fields=rendered_fields))
     ]
-    response = await llm.invoke_async(messages=prompt)
+    response = await llm.invoke_async(messages=prompt, json_output=True)
 
     parsed = json.loads(response.text)
     return parsed
@@ -278,6 +278,7 @@ async def prepare_free_template_values_async(llm: LLMABC, chat_history: list[Cha
 __STRICT_TEMPLATE_PREPARE_VALUES_TEXT = """
 Прекращай возвращать структуру с "user_message" и "is_ready". Возвращай только новую структуру.
 Ты посчитал, что информации достаточно. Теперь определи значения всех полей.
+Обязательно учитывай контекст, в котором стоят поля в шаблоне. 
 Ответ дай строго в формате JSON без лишнего текста. Содержимое: "название поля": "значение". В примере еще раз даны все поля и краткие пояснения к ним.
 {{
 {fields}

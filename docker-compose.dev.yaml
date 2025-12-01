@@ -7,6 +7,8 @@ services:
     environment:
       - "TEMPLATES_DIR=/app/templates"
       - "RESULTS_DIR=/app/results"
+      - "BACKEND_URL=http://localhost:8000"
+      - "FRONTEND_URL=http://localhost:5173"
     ports:
       - "8000:8000"
     volumes:

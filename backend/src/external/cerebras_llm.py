@@ -25,15 +25,19 @@ class CerebrasLLM(LLMABC):
         self.cerebras = AsyncCerebras()
         self.__logger = logging.getLogger(type(self).__name__)
 
-    async def invoke_async(self, messages: Iterable[ChatMessage], weak_model: bool = False) -> ChatMessage:
+    async def invoke_async(self, messages: Iterable[ChatMessage], weak_model: bool = False, json_output: bool = False) -> ChatMessage:
         model = self.MODEL_WEAK if weak_model else self.MODEL_STRONG
         self.__logger.debug("LLM Prompt (model: %s):\n%s", model, "\n".join(repr(m) for m in messages))
 
-        response = await self.cerebras.chat.completions.create(
-            messages = [self.__serialize_message(m) for m in messages],
-            model = model,
-            temperature=0.3
-        )
+        kwargs = {
+            "messages": [self.__serialize_message(m) for m in messages],
+            "model": model,
+            "temperature": 0.3,
+        }
+        if json_output:
+            kwargs["response_format"] = {"type": "json_object"}
+
+        response = await self.cerebras.chat.completions.create(**kwargs)
 
         self.__logger.debug("LLM Response (tokens: %s/%s/%s):\n%s",
                             response.usage.prompt_tokens,

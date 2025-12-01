@@ -7,10 +7,10 @@ class IssueResultFileStorageABC(ABC):
 
     @abstractmethod
     @contextmanager
-    def write_issue_result_file(self, issue_id: str) -> Generator[BinaryIO, None, None]:
+    def write_issue_result_file(self, issue_id: int) -> Generator[BinaryIO, None, None]:
         pass
 
     @abstractmethod
     @contextmanager
-    def read_issue_result_file(self, issue_id: str) -> Generator[BinaryIO, None, None]:
+    def read_issue_result_file(self, issue_id: int) -> Generator[BinaryIO, None, None]:
         pass

@@ -19,27 +19,52 @@ const AccountPage = () => {
   const [documents, setDocuments] = useState([]);
 
   // Загружаем данные пользователя
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const user = localStorage.getItem('user');
-        if (user) {
-          setUserData(JSON.parse(user));
+ useEffect(() => {
+  const loadUserData = async () => {
+    try {
+      const user = localStorage.getItem('user');
+      if (user) {
+        const parsedUser = JSON.parse(user);
+        console.log('Loaded user from localStorage:', parsedUser); // Добавим для отладки
+
+        // Проверяем, есть ли данные из Google
+        if (parsedUser.id) {
+          setUserData(parsedUser);
+
+          // Если имя пустое или дефолтное, пробуем взять из email
+          if (!parsedUser.name || parsedUser.name === 'Пользователь' || parsedUser.name === parsedUser.email) {
+            const nameFromEmail = parsedUser.email?.split('@')[0] || 'Пользователь';
+            const updatedUser = {
+              ...parsedUser,
+              name: nameFromEmail
+            };
+            setUserData(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          }
+        } else {
+          // Если данных нет, перенаправляем на авторизацию
+          navigate('/signin');
         }
-
-        // Здесь можно добавить загрузку документов с API
-        // const docs = await userAPI.getDocuments();
-        // setDocuments(docs);
-
-      } catch (error) {
-        console.error('Error loading user data:', error);
-      } finally {
-        setIsLoading(false);
+      } else {
+        // Если пользователя нет в localStorage, перенаправляем на авторизацию
+        navigate('/signin');
       }
-    };
 
-    loadUserData();
-  }, []);
+      // Здесь можно добавить загрузку документов с API
+      // const docs = await userAPI.getDocuments();
+      // setDocuments(docs);
+
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      // В случае ошибки перенаправляем на авторизацию
+      navigate('/signin');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  loadUserData();
+}, [navigate]);
 
   const handleSaveProfile = async (updatedData) => {
     try {
@@ -107,14 +132,27 @@ const AccountPage = () => {
         <div className="profile-header">
           <div className="profile-avatar">
             <div className="avatar-circle">
-              {userData?.avatar || '👤'}
+              {userData?.avatar ? (
+                <img
+                  src={userData.avatar}
+                  alt="Аватар"
+                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.style.display = 'none';
+                    e.target.parentElement.textContent = userData?.name?.charAt(0) || '👤';
+                  }}
+                />
+              ) : (
+                userData?.name?.charAt(0) || '👤'
+              )}
             </div>
             <div className="profile-info">
+              {/* ДОБАВЬТЕ ЭТОТ ЗАГОЛОВОК h1 */}
               <h1>{userData?.name || 'Пользователь'}</h1>
-              <p>Участник с {userData?.joinDate || 'недавно'}</p>
+              <p>{userData?.email || 'email@example.com'}</p>
               <div className="profile-contacts">
                 <span className="contact-item">📧 {userData?.email || 'email@example.com'}</span>
-                <span className="contact-item">📞 {userData?.phone || '+7 (999) 999-99-99'}</span>
               </div>
             </div>
           </div>
@@ -250,11 +288,36 @@ const AccountPage = () => {
 
 // Компонент формы редактирования профиля
 const EditProfileForm = ({ userData, onSave, onCancel }) => {
-  const [formData, setFormData] = useState(userData || {});
+  const [formData, setFormData] = useState(() => {
+    // Инициализируем форму данными из Google
+    const initialData = {
+      name: userData?.name || '',
+      email: userData?.email || '',
+      phone: userData?.phone || '',
+      firstName: userData?.firstName || userData?.name?.split(' ')[0] || '',
+      lastName: userData?.lastName || userData?.name?.split(' ').slice(1).join(' ') || ''
+    };
+
+    console.log('Form initialized with:', initialData); // Для отладки
+    return initialData;
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+
+    // Обновляем данные пользователя
+    const updatedData = {
+      ...userData,
+      ...formData,
+      // Если имя было изменено, обновляем его
+      name: formData.name || `${formData.firstName} ${formData.lastName}`.trim() || userData?.email?.split('@')[0],
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      phone: formData.phone
+    };
+
+    console.log('Saving user data:', updatedData); // Для отладки
+    onSave(updatedData);
   };
 
   const handleChange = (field, value) => {
@@ -267,12 +330,32 @@ const EditProfileForm = ({ userData, onSave, onCancel }) => {
   return (
     <form onSubmit={handleSubmit} className="edit-profile-form">
       <div className="form-group">
-        <label>Имя и фамилия</label>
+        <label>Имя</label>
+        <input
+          type="text"
+          value={formData.firstName || ''}
+          onChange={(e) => handleChange('firstName', e.target.value)}
+          placeholder="Введите ваше имя"
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Фамилия</label>
+        <input
+          type="text"
+          value={formData.lastName || ''}
+          onChange={(e) => handleChange('lastName', e.target.value)}
+          placeholder="Введите вашу фамилию"
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Отображаемое имя</label>
         <input
           type="text"
           value={formData.name || ''}
           onChange={(e) => handleChange('name', e.target.value)}
-          placeholder="Введите ваше имя"
+          placeholder="Имя для отображения"
         />
       </div>
 
@@ -281,19 +364,13 @@ const EditProfileForm = ({ userData, onSave, onCancel }) => {
         <input
           type="email"
           value={formData.email || ''}
-          onChange={(e) => handleChange('email', e.target.value)}
-          placeholder="Введите ваш email"
+          readOnly
+          disabled
+          className="disabled-input"
         />
-      </div>
-
-      <div className="form-group">
-        <label>Телефон</label>
-        <input
-          type="tel"
-          value={formData.phone || ''}
-          onChange={(e) => handleChange('phone', e.target.value)}
-          placeholder="Введите ваш телефон"
-        />
+        <small style={{ color: '#666', fontSize: '0.8rem' }}>
+          Email изменить нельзя, так как используется для авторизации через Google
+        </small>
       </div>
 
       <div className="form-actions">

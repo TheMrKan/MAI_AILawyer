@@ -230,12 +230,6 @@ const AboutPage = () => {
                 >
                   Создать документ
                 </Button>
-                <Button 
-                  variant="secondary"
-                  onClick={() => window.location.href = '/signin'}
-                >
-                  Войти в аккаунт
-                </Button>
               </div>
             </div>
           </div>

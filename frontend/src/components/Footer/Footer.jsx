@@ -8,11 +8,6 @@ const Footer = () => {
         <div className="footer-section">
           <h3>Claim-Composer AI</h3>
           <p>Юридический помощник с искусственным интеллектом</p>
-          <div className="social-links">
-            <a href="#" className="social-link">📘</a>
-            <a href="#" className="social-link">🐦</a>
-            <a href="#" className="social-link">📷</a>
-          </div>
         </div>
         
         <div className="footer-section">

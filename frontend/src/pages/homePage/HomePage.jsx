@@ -135,7 +135,7 @@ const HomePage = () => {
 
               {currentUser && (
                 <div className="user-welcome">
-                  <p>Добро пожаловать, {currentUser.first_name || currentUser.email}!</p>
+                  <p>Добро пожаловать, {currentUser.name || currentUser.email}!</p>
                 </div>
               )}
 
@@ -170,11 +170,6 @@ const HomePage = () => {
             <div className="section-header">
               <h2>Опишите вашу проблему</h2>
               <p>AI-помощник проанализирует ситуацию и предложит решение</p>
-              {!currentUser && (
-                <div className="auth-notice">
-                  <span>⚠️ Для создания документов требуется авторизация</span>
-                </div>
-              )}
             </div>
 
             <form onSubmit={handleSubmit} className="problem-form">
@@ -207,6 +202,12 @@ const HomePage = () => {
                   </div>
                 </div>
               </div>
+
+                {!currentUser && (
+                <div className="auth-notice" style={{ marginBottom: '20px', textAlign: 'center' }}>
+                  <span>⚠️ Для создания документов требуется авторизация</span>
+                </div>
+              )}
 
               {currentUser ? (
                 <Button

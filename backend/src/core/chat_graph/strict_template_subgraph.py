@@ -85,4 +85,5 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
 
         self.__logger.debug("Document generated")
         return {"messages": [*state["messages"],
-                             ChatMessage.from_ai("Ваш документ готов!\nСпасибо, что воспользовались нашим сервисом!")]}
+                             ChatMessage.from_ai("Ваш документ готов!\nСпасибо, что воспользовались нашим сервисом!")],
+                "success": True}

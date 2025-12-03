@@ -87,4 +87,6 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
             file_service.fill_with_values(state["relevant_template"], state["field_values"], result_file)
 
         self.__logger.debug("Document generated")
-        return {"messages": [*state["messages"], ChatMessage.from_ai("Ваш документ готов!\nСпасибо, что воспользовались нашим сервисом!")]}
+        return {"messages": [*state["messages"],
+                             ChatMessage.from_ai("Ваш документ готов!\nСпасибо, что воспользовались нашим сервисом!")],
+                "success": True}

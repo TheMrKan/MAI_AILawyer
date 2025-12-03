@@ -2,6 +2,7 @@ from langgraph.checkpoint.memory import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command, StateSnapshot
 import logging
+from dataclasses import dataclass
 
 from src.core.chat_graph.full_chat_graph import FullChatGraph, InputState
 from src.dto.messages import ChatMessage
@@ -9,6 +10,13 @@ from src.dto.messages import ChatMessage
 
 class GraphError(Exception):
     pass
+
+
+@dataclass
+class IssueChatState:
+    messages: list[ChatMessage]
+    is_ended: bool
+    success: bool
 
 
 class IssueChatService:
@@ -29,16 +37,20 @@ class IssueChatService:
         compiled = graph.compile(checkpointer=checkpointer)
         return compiled
 
-    async def get_messages_async(self, issue_id: int) -> list[ChatMessage]:
+    async def get_state(self, issue_id: int) -> IssueChatState:
         graph_config = {"configurable": {"thread_id": issue_id}}
         graph_state = await self.graph.aget_state(graph_config, subgraphs=True)
 
         if not self.__is_exists(graph_state):
             raise KeyError("Чат не существует")
 
-        return self.__get_chat_history(graph_state)
+        return IssueChatState(
+            self.__get_chat_history(graph_state),
+            self.__is_ended(graph_state),
+            self.__is_success(graph_state)
+        )
 
-    async def process_new_user_message(self, issue_id: int, message_text: str) -> list[ChatMessage]:
+    async def process_new_user_message(self, issue_id: int, message_text: str) -> IssueChatState:
         graph_config = {"configurable": {"thread_id": issue_id}}
         graph_state = await self.graph.aget_state(graph_config, subgraphs=True)
 
@@ -55,10 +67,18 @@ class IssueChatService:
 
         result = await self.graph.ainvoke(graph_input, graph_config, subgraphs=True)
 
-        if result["messages"][0].role.value == "system":
-            return result["messages"][skip_messages:]
+        messages = result["messages"]
 
-        return result["messages"]
+        if result["messages"][0].role.value == "system":
+            messages = result["messages"][skip_messages:]
+
+        graph_state = await self.graph.aget_state(graph_config, subgraphs=True)
+
+        return IssueChatState(
+            messages,
+            self.__is_ended(graph_state),
+            self.__is_success(graph_state)
+        )
 
     async def is_ended(self, issue_id: int) -> bool:
         graph_config = {"configurable": {"thread_id": issue_id}}
@@ -81,3 +101,10 @@ class IssueChatService:
     @staticmethod
     def __is_ended(graph_state: StateSnapshot) -> bool:
         return not any(graph_state.next)
+
+    @staticmethod
+    def __is_success(graph_state: StateSnapshot) -> bool:
+        success = graph_state.values.get("success", False)
+        if not success and any(graph_state.tasks):
+            success = graph_state.tasks[0].state.values.get("success", False)
+        return success

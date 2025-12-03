@@ -23,6 +23,7 @@ class MessageSchema(BaseModel):
 class ChatUpdateSchema(BaseModel):
     new_messages: list[MessageSchema]
     is_ended: bool
+    success: bool
 
 
 class IssueCreateResponseSchema(BaseModel):

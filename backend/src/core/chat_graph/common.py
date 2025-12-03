@@ -25,6 +25,7 @@ class BaseState(InputState, total=False):
     relevant_template: Template | None
     template_confirmed: bool
     field_values: dict[str, str]
+    success: bool
 
 
 class FreeTemplateState(BaseState, total=False):

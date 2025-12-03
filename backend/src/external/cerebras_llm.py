@@ -1,8 +1,9 @@
 import logging
-from cerebras.cloud.sdk import AsyncCerebras
+from cerebras.cloud.sdk import AsyncCerebras, RateLimitError
 from cerebras.cloud.sdk.types.chat.chat_completion import ChatCompletionResponseChoiceMessage
 from typing import Iterable
 
+from src.exceptions import ExternalRateLimitException
 from src.core.llm import LLMABC
 from src.dto.messages import ChatMessage, MessageRole
 
@@ -37,7 +38,10 @@ class CerebrasLLM(LLMABC):
         if json_output:
             kwargs["response_format"] = {"type": "json_object"}
 
-        response = await self.cerebras.chat.completions.create(**kwargs)
+        try:
+            response = await self.cerebras.chat.completions.create(**kwargs)
+        except RateLimitError:
+            raise ExternalRateLimitException()
 
         self.__logger.debug("LLM Response (tokens: %s/%s/%s):\n%s",
                             response.usage.prompt_tokens,

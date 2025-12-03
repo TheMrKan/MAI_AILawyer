@@ -2,9 +2,8 @@ from langgraph.graph import StateGraph, START
 from langgraph.types import interrupt
 import logging
 
-from src.core import llm_use_cases
 from src.core.chats.graph.common import BaseState, StrictTemplateState, FreeTemplateState
-from src.core.llm import LLMABC
+from src.core.llm import LLMABC, use_cases
 from src.core.results.iface import IssueResultFileStorageABC
 from src.core.templates.file_service import TemplateFileService
 from src.core.chats.types import ChatMessage
@@ -68,7 +67,7 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
     async def __prepare_field_values(self, state: FreeTemplateState, llm: LLMABC) -> FreeTemplateState:
         self.__logger.debug("Preparing field values...")
         values = await llm_use_cases.prepare_strict_template_values_async(llm, state["messages"],
-                                                                        state["relevant_template"])
+                                                                          state["relevant_template"])
         self.__logger.debug("Prepared field values: %s", values)
 
         return {"field_values": values}

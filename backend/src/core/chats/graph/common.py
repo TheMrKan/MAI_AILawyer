@@ -3,8 +3,7 @@ import logging
 from typing import TypedDict
 
 from src.application.provider import inject_global
-from src.core import llm_use_cases
-from src.core.llm import LLMABC
+from src.core.llm import LLMABC, use_cases
 from src.core.chats.types import ChatMessage
 from src.dto.laws import LawFragment
 from src.core.templates.types import Template

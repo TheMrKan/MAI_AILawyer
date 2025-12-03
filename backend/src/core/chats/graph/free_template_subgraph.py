@@ -6,8 +6,7 @@ from src.core.chats.graph.common import BaseState, FreeTemplateState
 from src.core.templates.service import TemplateService
 from src.core.templates.file_service import TemplateFileService
 from src.core.results.iface import IssueResultFileStorageABC
-from src.core import llm_use_cases
-from src.core.llm import LLMABC
+from src.core.llm import LLMABC, use_cases
 from src.core.chats.types import ChatMessage
 from src.application.provider import inject_global
 

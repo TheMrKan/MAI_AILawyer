@@ -299,28 +299,6 @@
   margin-bottom: 2rem;
 }
 
-.document-card {
-  background: linear-gradient(135deg, $success-color, #059669);
-  color: $white;
-  padding: 2.5rem;
-  border-radius: 20px;
-  box-shadow: $shadow-lg;
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 200px;
-    height: 200px;
-    background: rgba($white, 0.1);
-    border-radius: 50%;
-    transform: translate(50%, -50%);
-  }
-}
-
 .document-header {
   display: flex;
   align-items: center;
@@ -446,5 +424,158 @@
     color: $gray;
     font-size: 0.9rem;
     line-height: 1.4;
+  }
+}
+
+
+.no-document-message {
+  text-align: center;
+  width: 100%;
+
+  p {
+    background: rgba(0, 0, 0, 0.05); // светло-серый фон
+    padding: 1rem;
+    border-radius: 8px;
+    line-height: 1.6;
+    color: $dark-text; // черный текст
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+
+    strong {
+      color: $dark-text; // черный жирный текст
+      font-size: 1.1rem;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  .action-btn {
+    background: $primary-color; // основной цвет кнопки
+    color: $white; // белый текст на кнопке
+    font-weight: 600;
+    border: none;
+
+    &:hover {
+      background: darken($primary-color, 10%);
+    }
+  }
+  .document-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+
+    @include mobile {
+      flex-direction: column;
+    }
+  }
+
+  .action-btn {
+    background: $primary-color;
+    color: $white;
+    font-weight: 600;
+    border: none;
+    min-width: 200px;
+
+    &:hover {
+      background: darken($primary-color, 10%);
+    }
+
+    @include mobile {
+      min-width: auto;
+      width: 100%;
+    }
+  }
+}
+
+.document-card {
+  background: linear-gradient(135deg, $success-color, #059669);
+  color: $white;
+  padding: 2.5rem;
+  border-radius: 20px;
+  box-shadow: $shadow-lg;
+  position: relative;
+  overflow: hidden;
+
+  /* псевдоэлемент ниже контента */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 220px;
+    height: 220px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 50%;
+    transform: translate(40%, -40%);
+    z-index: 0;
+  }
+
+  /* весь контент — сверху */
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .document-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    .document-icon {
+      font-size: 3rem;
+    }
+
+    .document-info {
+      h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.5rem;
+        color: #000 !important;
+      }
+
+      p {
+        margin: 0;
+        color: #000 !important;
+      }
+    }
+  }
+
+  .document-details {
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 1.5rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(12px);
+
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .label {
+        color: #000 !important;
+      }
+
+      .value {
+        color: #000 !important;
+        font-weight: 600;
+      }
+    }
+  }
+
+  .document-actions {
+    display: flex;
+    justify-content: center;
+
+    .action-btn {
+      min-width: 250px;
+    }
   }
 }

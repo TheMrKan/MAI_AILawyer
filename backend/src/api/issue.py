@@ -21,6 +21,7 @@ from src.api.issue_schemas import (
 )
 from src.core.issue_service import IssueService
 from src.database.models import Issue
+from src.exceptions import ExternalRateLimitException
 
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,9 @@ async def create_issue(
         await issue_service.commit_issue(new_issue)
         logger.info(f"New issue created: {new_issue.text}")
 
+    except ExternalRateLimitException as e:
+        logger.exception("Rate limit", exc_info=e)
+        raise HTTPException(status_code=429, detail="Ограничение на внешнем сервисе")
     except Exception as e:
         await issue_service.rollback_issue()
         logger.exception(f"Failed to create issue: {e}")
@@ -110,6 +114,9 @@ async def chat(
     except GraphError as e:
         logger.exception("Graph error", exc_info=e)
         raise HTTPException(status_code=400, detail=str(e))
+    except ExternalRateLimitException as e:
+        logger.exception("Rate limit", exc_info=e)
+        raise HTTPException(status_code=429, detail="Ограничение на внешнем сервисе")
     except Exception as e:
         logger.exception("Internal error", exc_info=e)
         raise HTTPException(status_code=500, detail="Произошла непредвиденная ошибка")

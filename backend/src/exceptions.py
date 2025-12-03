@@ -1,0 +1,3 @@
+
+class ExternalRateLimitException(Exception):
+    pass

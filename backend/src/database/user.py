@@ -5,10 +5,10 @@ from typing import Optional
 
 from src.database.models import User
 from src.api.schemas import UserCreate
-from src.core.interface import IUserRepository
+from src.core.users.iface import UserRepositoryABC
 
 
-class UserRepository(IUserRepository):
+class UserRepository(UserRepositoryABC):
     def __init__(self, db: AsyncSession):
         self.db = db
 

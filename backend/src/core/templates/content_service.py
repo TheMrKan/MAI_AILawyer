@@ -5,7 +5,7 @@ from src.core.templates.iface import TemplatesFileStorageABC
 from src.core.templates.types import Template
 
 
-class TemplateFileService:
+class TemplateContentService:
 
     templates_storage: TemplatesFileStorageABC
 

@@ -3,8 +3,8 @@ import logging
 
 from src.core.chats.graph.common import BaseState, create_process_confirmation_node
 from src.core.llm import LLMABC, use_cases
-from src.core.templates.service import TemplateService
-from src.core.templates.file_service import TemplateFileService
+from src.core.templates.manager import TemplateManager
+from src.core.templates.content_service import TemplateContentService
 from src.application.provider import inject_global
 
 
@@ -27,14 +27,14 @@ class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]
         self.add_node("confirm1", create_process_confirmation_node("template_confirmed", self.__logger))
 
     @inject_global
-    async def __find_templates(self, state: BaseState, service: TemplateService) -> BaseState:
+    async def __find_templates(self, state: BaseState, service: TemplateManager) -> BaseState:
         self.__logger.info("Searching for templates...")
         templates = await service.find_templates_async(state["first_description"])
         self.__logger.info(f"Found templates: {templates}")
         return {"templates": templates}
 
     @inject_global
-    async def __analyze_templates(self, state: BaseState, service: TemplateFileService, llm: LLMABC) -> BaseState:
+    async def __analyze_templates(self, state: BaseState, service: TemplateContentService, llm: LLMABC) -> BaseState:
         self.__logger.info("Analyzing templates...")
         texts = [service.extract_text(tpl) for tpl in state["templates"]]
 

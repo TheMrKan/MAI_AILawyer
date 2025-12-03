@@ -4,10 +4,10 @@ from typing import Optional
 
 from src.config import settings
 from src.api.schemas import Token, UserResponse, TokenData
-from src.core.interface import IAuthService
+from src.core.users.iface import AuthServiceABC
 
 
-class AuthService(IAuthService):
+class AuthService(AuthServiceABC):
     def __init__(self):
         self.secret_key = settings.SECRET_KEY
         self.jwt_algorithm = settings.ALGORITHM

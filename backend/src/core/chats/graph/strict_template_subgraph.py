@@ -5,7 +5,7 @@ import logging
 from src.core.chats.graph.common import BaseState, StrictTemplateState, FreeTemplateState
 from src.core.llm import LLMABC, use_cases
 from src.core.results.iface import IssueResultFileStorageABC
-from src.core.templates.file_service import TemplateFileService
+from src.core.templates.content_service import TemplateContentService
 from src.core.chats.types import ChatMessage
 from src.application.provider import inject_global
 
@@ -40,7 +40,7 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
     @inject_global
     async def __setup_loop(self,
                            state: BaseState,
-                           file_service: TemplateFileService) -> FreeTemplateState:
+                           file_service: TemplateContentService) -> FreeTemplateState:
         self.__logger.debug("Setting up QA loop...")
 
         text = file_service.extract_text(state["relevant_template"])
@@ -75,7 +75,7 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
     @inject_global
     async def __generate_document(self,
                                   state: FreeTemplateState,
-                                  file_service: TemplateFileService,
+                                  file_service: TemplateContentService,
                                   result_storage: IssueResultFileStorageABC) -> FreeTemplateState:
         self.__logger.debug("Generating document...")
 

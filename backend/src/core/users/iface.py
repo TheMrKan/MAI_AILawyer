@@ -4,7 +4,7 @@ from typing import Optional, Dict
 from src.api.schemas import UserCreate
 
 
-class IOAuthProvider(ABC):
+class OAuthProviderABC(ABC):
     @abstractmethod
     async def get_user_info(self, code: str) -> UserCreate:
         pass
@@ -14,7 +14,7 @@ class IOAuthProvider(ABC):
         pass
 
 
-class IUserRepository(ABC):
+class UserRepositoryABC(ABC):
     @abstractmethod
     async def get_by_email(self, email: str):
         pass
@@ -28,7 +28,7 @@ class IUserRepository(ABC):
         pass
 
 
-class IAuthService(ABC):
+class AuthServiceABC(ABC):
     @abstractmethod
     def create_access_token(self, user_id: str) -> str:
         pass

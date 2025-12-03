@@ -3,8 +3,8 @@ from langgraph.types import interrupt
 import logging
 
 from src.core.chats.graph.common import BaseState, FreeTemplateState
-from src.core.templates.service import TemplateService
-from src.core.templates.file_service import TemplateFileService
+from src.core.templates.manager import TemplateManager
+from src.core.templates.content_service import TemplateContentService
 from src.core.results.iface import IssueResultFileStorageABC
 from src.core.llm import LLMABC, use_cases
 from src.core.chats.types import ChatMessage
@@ -42,8 +42,8 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
     @inject_global
     async def __setup_loop(self,
                            state: BaseState,
-                           service: TemplateService,
-                           file_service: TemplateFileService) -> FreeTemplateState:
+                           service: TemplateManager,
+                           file_service: TemplateContentService) -> FreeTemplateState:
         self.__logger.debug("Setting up QA loop...")
 
         free_template = await service.get_free_template_async()
@@ -78,7 +78,7 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
     @inject_global
     async def __generate_document(self,
                                   state: FreeTemplateState,
-                                  file_service: TemplateFileService,
+                                  file_service: TemplateContentService,
                                   result_storage: IssueResultFileStorageABC) -> FreeTemplateState:
         self.__logger.debug("Generating document...")
 

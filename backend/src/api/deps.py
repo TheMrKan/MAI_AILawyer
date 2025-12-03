@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 import logging
 
-from src.core.auth import auth_service
+from src.core.users.auth_service import auth_service
 from src.database.user import UserRepository
 from src.database.connection import get_db
 

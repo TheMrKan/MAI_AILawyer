@@ -5,10 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import settings
 from src.database.connection import get_db
 from src.external.google_oauth import google_oauth
-from src.core.auth import auth_service
-from src.core.state_service import state_service
+from src.core.users.auth_service import auth_service
 from src.database.user import UserRepository
-from src.api.deps import get_current_user
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,7 +15,7 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 @router.get("/google")
 async def google_auth():
-    state = state_service.generate_state()
+    state = google_oauth.generate_state()
     auth_url = google_oauth.get_authorization_url(state)
 
     response = RedirectResponse(auth_url)
@@ -57,7 +55,7 @@ async def google_callback(
         )
 
     cookie_state = request.cookies.get("oauth_state")
-    if not cookie_state or not state_service.validate_state(cookie_state) or state != cookie_state:
+    if not cookie_state or not google_oauth.validate_state(cookie_state) or state != cookie_state:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid state parameter"

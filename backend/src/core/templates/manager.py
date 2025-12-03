@@ -3,7 +3,7 @@ from src.core.templates.iface import TemplatesRepositoryABC
 from src.core.templates.types import Template
 
 
-class TemplateService:
+class TemplateManager:
 
     __repository: TemplatesRepositoryABC
 

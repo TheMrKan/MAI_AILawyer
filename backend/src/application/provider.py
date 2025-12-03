@@ -85,8 +85,8 @@ async def build_async() -> Provider:
     await templates_repo.init_async()
     provider.register_singleton(TemplatesRepositoryABC, templates_repo)
 
-    from src.core.templates.service import TemplateService
-    provider.register_singleton(TemplateService, TemplateService(templates_repo))
+    from src.core.templates.manager import TemplateManager
+    provider.register_singleton(TemplateManager, TemplateManager(templates_repo))
 
     from src.core.templates.iface import TemplatesFileStorageABC
     from src.external.fs_templates_storage import FilesystemTemplatesStorage
@@ -96,8 +96,8 @@ async def build_async() -> Provider:
     templates_storage = FilesystemTemplatesStorage(templates_dir)
     provider.register_singleton(TemplatesFileStorageABC, templates_storage)
 
-    from src.core.templates.file_service import TemplateFileService
-    provider.register_singleton(TemplateFileService, TemplateFileService(templates_storage))
+    from src.core.templates.content_service import TemplateContentService
+    provider.register_singleton(TemplateContentService, TemplateContentService(templates_storage))
 
     from src.core.results.iface import IssueResultFileStorageABC
     from src.external.fs_issue_result_storage import FilesystemIssueResultStorageABC

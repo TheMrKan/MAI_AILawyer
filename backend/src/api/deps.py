@@ -6,8 +6,8 @@ import logging
 
 from src.application.provider import Provider, Scope
 from src.core.users.iface import AuthServiceABC
-from src.database.user import UserRepository
-from src.database.connection import get_db
+from src.storage.sql.user_repository import UserRepository
+from src.storage.sql.connection import get_db
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer(auto_error=False)

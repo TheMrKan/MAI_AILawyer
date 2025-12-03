@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from src.database.models import Issue
+from src.storage.sql.models import Issue
 from typing import Optional
 
 

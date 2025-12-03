@@ -1,7 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from src.config import settings
 import logging
+
+from src.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,6 @@ async def get_db() -> AsyncSession:
 
 async def create_tables():
     async with engine.begin() as conn:
-        from src.database.base import Base
+        from src.storage.sql.base import Base
         await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables created successfully")

@@ -3,7 +3,7 @@ from sqlalchemy import select, and_
 import uuid
 from typing import Optional
 
-from src.database.models import User
+from src.storage.sql.models import User
 from src.api.schemas import UserCreate
 from src.core.users.iface import UserRepositoryABC
 

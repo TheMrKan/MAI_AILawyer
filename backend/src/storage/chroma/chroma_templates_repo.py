@@ -4,7 +4,7 @@ import json
 
 from src.core.templates.iface import TemplatesRepositoryABC
 from src.core.templates.types import Template, TemplateField
-from src.external.base_chroma_repository import BaseChromaRepository
+from src.storage.chroma.base_chroma_repository import BaseChromaRepository
 
 
 class _TemplateField(pydantic.BaseModel):

@@ -1,10 +1,10 @@
-from sqlalchemy import Column, String, DateTime, Boolean, Text, Integer, DateTime, ForeignKey
+from sqlalchemy import Column, String, Boolean, Text, Integer, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
 
+from src.storage.sql.base import Base
 
-from src.database.base import Base
 
 class User(Base):
     __tablename__ = "users"
@@ -22,6 +22,7 @@ class User(Base):
 
     def __repr__(self):
         return f"<User {self.email} ({self.sso_provider})>"
+
 
 class Issue(Base):
     __tablename__ = "issues"

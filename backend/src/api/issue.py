@@ -8,7 +8,7 @@ import logging
 from src.core.chats.service import IssueChatService, GraphError
 from src.application.provider import Provider, Scope
 from src.core.chats.types import ChatMessage, MessageRole as DtoMessageRole
-from src.database.connection import get_db
+from src.storage.sql.connection import get_db
 from src.api.deps import get_current_user, get_scope
 from src.core.results.iface import IssueResultFileStorageABC
 from src.api.issue_schemas import (
@@ -19,7 +19,7 @@ from src.api.issue_schemas import (
     AddUserMessageSchema
 )
 from src.core.issue_service import IssueService
-from src.database.models import Issue
+from src.storage.sql.models import Issue
 from src.exceptions import ExternalRateLimitException
 
 

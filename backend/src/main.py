@@ -18,7 +18,7 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    from src.database.connection import create_tables
+    from src.storage.sql.connection import create_tables
     await create_tables()
 
     provider_instance = await provider.build_async()

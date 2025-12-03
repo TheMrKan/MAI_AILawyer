@@ -136,13 +136,13 @@ async def build_async() -> Provider:
     chroma_client = await chromadb.AsyncHttpClient(host="chroma", port=8000)
 
     from src.core.laws.iface import LawDocsRepositoryABC
-    from src.external.chroma_law_docs_repo import ChromaLawDocsRepository
+    from src.storage.chroma.chroma_law_docs_repo import ChromaLawDocsRepository
     laws_repo = ChromaLawDocsRepository(chroma_client)
     await laws_repo.init_async()
     provider.register(LawDocsRepositoryABC, Singleton(laws_repo))
 
     from src.core.templates.iface import TemplatesRepositoryABC
-    from src.external.chroma_templates_repo import ChromaTemplatesRepository
+    from src.storage.chroma.chroma_templates_repo import ChromaTemplatesRepository
     templates_repo = ChromaTemplatesRepository(chroma_client)
     await templates_repo.init_async()
     provider.register(TemplatesRepositoryABC, Singleton(templates_repo))
@@ -151,7 +151,7 @@ async def build_async() -> Provider:
     provider.register(TemplateManager, Singleton(TemplateManager(templates_repo)))
 
     from src.core.templates.iface import TemplatesFileStorageABC
-    from src.external.fs_templates_storage import FilesystemTemplatesStorage
+    from src.storage.filesystem.fs_templates_storage import FilesystemTemplatesStorage
     templates_dir = Path(os.getenv("TEMPLATES_DIR") or "")
     if not templates_dir.exists():
         raise Exception("TEMPLATES_DIR env var must be set")
@@ -162,7 +162,7 @@ async def build_async() -> Provider:
     provider.register(TemplateContentService, Singleton(TemplateContentService(templates_storage)))
 
     from src.core.results.iface import IssueResultFileStorageABC
-    from src.external.fs_issue_result_storage import FilesystemIssueResultStorageABC
+    from src.storage.filesystem.fs_issue_result_storage import FilesystemIssueResultStorageABC
     results_dir = Path(os.getenv("RESULTS_DIR") or "")
     if not results_dir.exists():
         raise Exception("RESULTS_DIR env var must be set")
@@ -179,7 +179,7 @@ async def build_async() -> Provider:
     provider.register(AuthServiceABC, Singleton(AuthService()))
 
     from src.core.users.iface import UserRepositoryABC
-    from src.database.user import UserRepository
+    from src.storage.sql.user_repository import UserRepository
     provider.register(UserRepositoryABC, Transient(UserRepository))
 
     from src.core.issue_service import IssueService

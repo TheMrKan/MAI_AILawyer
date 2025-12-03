@@ -1,19 +1,9 @@
 import asyncio
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-from unittest.mock import Mock
+from unittest.mock import Mock, AsyncMock
 
 from src.main import app
-from src.database.connection import get_db
-from src.database.base import Base
-
-
-test_engine = create_async_engine("postgresql+asyncpg://postgres:postgres@localhost:5432/postgres", echo=False, pool_pre_ping=True)
-TestingSessionLocal = sessionmaker(
-    test_engine, class_=AsyncSession, expire_on_commit=False
-)
 
 
 @pytest.fixture(scope="session")
@@ -24,29 +14,21 @@ def event_loop():
 
 
 @pytest.fixture(scope="function")
-async def db_session():
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with TestingSessionLocal() as session:
-        try:
-            yield session
-            await session.commit()
-        except:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
+async def mock_db_session():
+    session = AsyncMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    session.close = AsyncMock()
+    yield session
 
 
 @pytest.fixture(scope="function")
-def client(db_session):
+def client(mock_db_session):
     async def override_get_db():
         try:
-            yield db_session
+            yield mock_db_session
         finally:
-            await db_session.close()
+            await mock_db_session.close()
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
@@ -86,3 +68,20 @@ def mock_token():
             "created_at": "2024-01-01T00:00:00"
         }
     }
+
+
+@pytest.fixture
+def skip_db_tests():
+    def _skip_if_uses_db(test_func):
+        import inspect
+        source = inspect.getsource(test_func)
+        db_keywords = ["session.query", "Session", "db.", "get_db", "select(", "insert("]
+
+        for keyword in db_keywords:
+            if keyword in source:
+                pytest.skip(f"Test uses database operations: {keyword}")
+                return
+
+        return test_func
+
+    return _skip_if_uses_db

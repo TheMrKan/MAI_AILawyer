@@ -62,9 +62,9 @@ class TestAuthRoutes:
         mock_google_oauth.get_authorization_url.assert_called_once_with("test_state")
 
     @patch('src.api.routers.google_oauth')
-    @patch('src.api.routers.auth_service')
     @patch('src.api.routers.UserRepository')
-    def test_google_callback_success_with_frontend(self, mock_user_repo, mock_auth_service,
+    @patch('src.api.routers.auth_service')
+    def test_google_callback_success_with_frontend(self, mock_auth_service, mock_user_repo,
                                                    mock_google_oauth, client, mock_oauth_user_data, mock_user,
                                                    mock_token_response):
         mock_google_oauth.get_user_info = AsyncMock(return_value=mock_oauth_user_data)
@@ -173,18 +173,15 @@ class TestAuthRoutes:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.json()["detail"] == "Invalid token"
 
-    @patch('src.api.routers.auth_service')
     @pytest.mark.parametrize("token_value", ["", None, " "])
-    def test_verify_token_empty_or_none(self, mock_auth_service, client, token_value):
+    def test_verify_token_empty_or_none(self, client, token_value):
         response = client.post("/auth/token/verify", json={"token": token_value})
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @patch('src.api.routers.google_oauth')
-    @patch('src.api.routers.auth_service')
     @patch('src.api.routers.UserRepository')
-    def test_google_callback_user_repo_exception(self, mock_user_repo, mock_auth_service,
-                                                 mock_google_oauth, client, mock_oauth_user_data):
+    def test_google_callback_user_repo_exception(self, mock_user_repo, mock_google_oauth, client, mock_oauth_user_data):
         mock_google_oauth.get_user_info = AsyncMock(return_value=mock_oauth_user_data)
 
         mock_user_repo_instance = AsyncMock()

@@ -1,31 +1,32 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 import uuid
-from typing import Optional
 
 from src.storage.sql.models import User
-from src.api.schemas import UserCreate
 from src.core.users.iface import UserRepositoryABC
+from src.core.users.types import UserInfo, UserSSOInfo
 
 
 class UserRepository(UserRepositoryABC):
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_by_id(self, user_id: str) -> Optional[User]:
+    async def get_by_id(self, user_id: str) -> UserInfo | None:
         try:
             user_uuid = uuid.UUID(user_id)
         except (ValueError, AttributeError):
             return None
 
         result = await self.db.execute(select(User).where(User.id == user_uuid))
-        return result.scalar_one_or_none()
+        db_user = result.scalar_one_or_none()
+        return UserInfo.model_validate(db_user)
 
-    async def get_by_email(self, email: str) -> Optional[User]:
+    async def get_by_email(self, email: str) -> UserInfo | None:
         result = await self.db.execute(select(User).where(User.email == email))
-        return result.scalar_one_or_none()
+        db_user = result.scalar_one_or_none()
+        return UserInfo.model_validate(db_user)
 
-    async def get_by_sso(self, sso_provider: str, sso_id: str) -> Optional[User]:
+    async def get_by_sso(self, sso_provider: str, sso_id: str) -> UserInfo | None:
         result = await self.db.execute(
             select(User).where(
                 and_(
@@ -34,9 +35,10 @@ class UserRepository(UserRepositoryABC):
                 )
             )
         )
-        return result.scalar_one_or_none()
+        db_user = result.scalar_one_or_none()
+        return UserInfo.model_validate(db_user)
 
-    async def create(self, user_data: UserCreate) -> User:
+    async def create(self, user_data: UserSSOInfo) -> UserInfo:
         user = User(
             id=uuid.uuid4(),
             email=user_data.email,
@@ -47,32 +49,16 @@ class UserRepository(UserRepositoryABC):
             avatar_url=user_data.avatar_url,
         )
         self.db.add(user)
-        await self.db.commit()
-        await self.db.refresh(user)
-        return user
+        await self.db.flush()
+        return UserInfo.model_validate(user)
 
-    async def get_or_create(self, user_data: UserCreate) -> User:
+    async def get_or_create(self, user_data: UserSSOInfo) -> UserInfo:
         user = await self.get_by_sso(user_data.sso_provider, user_data.sso_id)
         if user:
             return user
 
+        user = await self.get_by_email(user_data.email)
+        if user:
+            return user
 
-        try:
-            return await self.create(user_data)
-        except Exception as e:
-            await self.db.rollback()
-
-            user = await self.get_by_email(user_data.email)
-            if user:
-                user.sso_provider = user_data.sso_provider
-                user.sso_id = user_data.sso_id
-                if user_data.first_name and not user.first_name:
-                    user.first_name = user_data.first_name
-                if user_data.last_name and not user.last_name:
-                    user.last_name = user_data.last_name
-
-
-                await self.db.commit()
-                await self.db.refresh(user)
-                return user
-            raise e
+        return await self.create(user_data)

@@ -1,51 +1,47 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Dict
 
-from src.api.schemas import UserCreate, Token
+from src.core.users.types import UserSSOInfo, UserInfo, AuthToken
 
 
 class OAuthProviderABC(ABC):
     @abstractmethod
-    async def get_user_info(self, code: str) -> UserCreate:
+    async def get_user_info(self, code: str) -> UserSSOInfo:
         pass
 
     @abstractmethod
-    def get_authorization_url(self) -> str:
+    def get_authorization_url(self, state: str) -> str:
         pass
 
 
 class UserRepositoryABC(ABC):
 
     @abstractmethod
-    async def get_by_id(self, user_id: str):
+    async def get_by_id(self, user_id: str) -> UserInfo | None:
         pass
 
     @abstractmethod
-    async def get_by_email(self, email: str):
+    async def get_by_email(self, email: str) -> UserInfo | None:
         pass
 
     @abstractmethod
-    async def get_by_sso(self, sso_provider: str, sso_id: str):
+    async def get_by_sso(self, sso_provider: str, sso_id: str) -> UserInfo | None:
         pass
 
     @abstractmethod
-    async def create(self, user_data: UserCreate):
+    async def create(self, user_data: UserSSOInfo) -> UserInfo:
         pass
 
     @abstractmethod
-    async def get_or_create(self, user_data: UserCreate):
+    async def get_or_create(self, user_data: UserSSOInfo) -> UserInfo:
         pass
 
 
 class AuthServiceABC(ABC):
+
     @abstractmethod
-    def create_access_token(self, user_id: str, email: str) -> str:
+    def authenticate(self, user: UserInfo) -> AuthToken:
         pass
 
     @abstractmethod
-    def verify_token(self, token: str) -> Optional[Dict]:
-        pass
-
-    @abstractmethod
-    def create_token_response(self, user) -> Token:
+    def read_token(self, token: str) -> str | None:
         pass

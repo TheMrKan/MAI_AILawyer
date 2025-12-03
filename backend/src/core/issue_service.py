@@ -1,7 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from src.storage.sql.models import Issue, User
 from typing import Optional
+
+from src.core.users.types import UserInfo
+from src.storage.sql.models import Issue
 
 
 class IssueService:
@@ -26,7 +28,7 @@ class IssueService:
         return result.scalar_one_or_none()
 
     @staticmethod
-    def can_download_result(issue: Issue, user: User | None) -> bool:
+    def can_download_result(issue: Issue, user: UserInfo | None) -> bool:
         if not user:
             return False
 

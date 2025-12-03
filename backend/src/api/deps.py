@@ -6,19 +6,20 @@ import logging
 
 from src.application.provider import Scope
 from src.core.users.iface import AuthServiceABC, UserRepositoryABC
+from src.core.users.types import UserInfo
 from src.storage.sql.connection import get_session
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer(auto_error=False)
 
 
-async def get_db_session() -> AsyncSession:
-    session = get_session()
+async def get_db_session(session: AsyncSession = Depends(get_session)) -> AsyncSession:
     try:
         yield session
         await session.commit()
     except:
         await session.rollback()
+        raise
 
 
 def get_scope() -> Scope:
@@ -31,7 +32,7 @@ async def get_current_user(
         authorization: Optional[str] = Header(None),
         db: AsyncSession = Depends(get_db_session),
         scope: Scope = Depends(get_scope)
-):
+) -> UserInfo | None:
     scope.set_scoped_value(db, AsyncSession)
 
     token = None
@@ -43,11 +44,10 @@ async def get_current_user(
     if not token:
         return None
 
-    token_data = scope[AuthServiceABC].verify_token(token)
-    if not token_data:
+    user_id = scope[AuthServiceABC].read_token(token)
+    if not user_id:
         return None
 
-    user_repo = scope[UserRepositoryABC]
-    user = await user_repo.get_by_id(token_data.user_id)
+    user = await scope[UserRepositoryABC].get_by_id(user_id)
 
     return user

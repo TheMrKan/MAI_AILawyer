@@ -73,7 +73,7 @@ async def google_callback(
         user_data = await google_oauth.get_user_info(code)
         user_repo = scope[UserRepositoryABC]
         user = await user_repo.get_or_create(user_data)
-        token_response = scope[AuthServiceABC].create_token_response(user)
+        token_response = scope[AuthServiceABC].authenticate(user)
 
         response_data = {
             "access_token": token_response.access_token,
@@ -101,26 +101,14 @@ async def google_callback(
         return response
 
     except ValueError as e:
-        logger.error(f"OAuth error: {str(e)}")
+        logger.error(f"OAuth error: {str(e)}", exc_info=e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e)
         )
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
+        logger.error(f"Unexpected error: {str(e)}", exc_info=e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Authentication failed"
         )
-
-
-@router.post("/token/verify")
-async def verify_token(token: str,
-                       provider: Provider = Depends(Provider)):
-    token_data = provider[AuthServiceABC].verify_token(token)
-    if not token_data:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
-        )
-    return {"valid": True, "user_id": token_data.user_id, "email": token_data.email}

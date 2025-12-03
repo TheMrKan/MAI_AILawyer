@@ -2,10 +2,12 @@ import httpx
 import secrets
 import time
 
-from src.api.schemas import UserCreate
+from src.core.users.iface import OAuthProviderABC
+from src.core.users.types import UserSSOInfo
 from src.config import settings
 
-class GoogleOAuth:
+
+class GoogleOAuth(OAuthProviderABC):
     AUTH_STATE_TTL = 600
 
     def __init__(self):
@@ -33,7 +35,7 @@ class GoogleOAuth:
         del self.states[state]
         return True
 
-    def get_authorization_url(self, state: str):
+    def get_authorization_url(self, state: str) -> str:
         base_url = "https://accounts.google.com/o/oauth2/v2/auth"
         params = {
             "client_id": self.client_id,
@@ -46,7 +48,7 @@ class GoogleOAuth:
         query_string = "&".join([f"{k}={v}" for k, v in params.items()])
         return f"{base_url}?{query_string}"
 
-    async def get_user_info(self, code: str) -> UserCreate:
+    async def get_user_info(self, code: str) -> UserSSOInfo:
         async with httpx.AsyncClient() as client:
             token_response = await client.post(
                 self.token_url,
@@ -75,7 +77,7 @@ class GoogleOAuth:
 
             user_info = user_info_response.json()
 
-        return UserCreate(
+        return UserSSOInfo(
             email=user_info["email"],
             sso_provider="google",
             sso_id=user_info["sub"],

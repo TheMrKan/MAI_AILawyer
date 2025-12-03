@@ -13,6 +13,7 @@ from src.api.deps import get_current_user, get_scope, get_db_session
 from src.core.results.iface import IssueResultFileStorageABC
 from src.core.issue_service import IssueService
 from src.exceptions import ExternalRateLimitException
+from src.core.users.types import UserInfo
 
 
 logger = logging.getLogger(__name__)
@@ -148,7 +149,7 @@ async def download_issue_file(
         issue_id: int,
         scope: Annotated[Scope, Depends(get_scope)],
         db: AsyncSession = Depends(get_db_session),
-        current_user=Depends(get_current_user)
+        current_user: UserInfo = Depends(get_current_user)
 ):
     scope.set_scoped_value(db, AsyncSession)
 

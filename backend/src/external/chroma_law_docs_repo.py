@@ -1,7 +1,5 @@
-import logging
-
 from src.core.laws import LawDocsRepositoryABC
-from src.dto.laws import LawFragment
+from src.core.laws.types import LawFragment
 from src.external.base_chroma_repository import BaseChromaRepository
 
 

@@ -4,7 +4,7 @@ import logging
 
 from src.core.laws import LawDocsRepositoryABC
 from src.application.provider import Provider
-from src.dto.laws import LawFragment as DtoLawFragment
+from src.core.laws.types import LawFragment as DtoLawFragment
 
 logger = logging.getLogger(__name__)
 

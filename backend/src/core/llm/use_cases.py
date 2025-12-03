@@ -5,7 +5,7 @@ from typing import NamedTuple
 
 from src.core.llm import LLMABC
 from src.core.chats.types import ChatMessage
-from src.dto.laws import LawFragment
+from src.core.laws.types import LawFragment
 from src.core.templates.types import Template
 
 

@@ -84,7 +84,36 @@ export const issueAPI = {
       console.error('Error getting chat history:', error);
       throw error;
     }
-  }
+  },
+
+  // Скачивание документа
+  async downloadDocument(issueId) {
+      try {
+        const response = await api.get(`/issue/${issueId}/download/`, {
+          responseType: 'arraybuffer', // Меняем на arraybuffer
+          timeout: 60000,
+          headers: {
+            'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          }
+        });
+
+        return response;
+      } catch (error) {
+        console.error('Error downloading document:', error);
+
+        // Более информативные ошибки
+        if (error.response?.status === 404) {
+          throw new Error('Документ не найден');
+        } else if (error.response?.status === 403) {
+          throw new Error('Нет доступа к документу');
+        } else if (error.response?.status === 500) {
+          throw new Error('Ошибка сервера при генерации документа');
+        }
+
+        throw error;
+      }
+    },
+
 };
 
 export const userAPI = {

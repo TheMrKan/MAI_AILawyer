@@ -142,8 +142,16 @@ async def download_issue_file(
             raise HTTPException(status_code=403, detail="Access denied")
 
         with storage.read_issue_result_file(issue_id) as file:
+            file_content = file.read()
+
+            if not file_content:
+                raise HTTPException(status_code=404, detail="Document is empty")
+
+            async def file_generator():
+                yield file_content
+
             return StreamingResponse(
-                file,
+                file_generator(),
                 media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 headers={
                     "Content-Disposition": f"attachment; filename=issue_{issue_id}_result.docx"

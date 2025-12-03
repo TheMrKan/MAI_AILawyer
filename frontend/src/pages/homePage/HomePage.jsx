@@ -116,24 +116,6 @@ const HomePage = () => {
     setCurrentUser(null);
   };
 
-  const quickExamples = [
-    {
-      title: 'Возврат товара',
-      description: 'Магазин отказывается принимать товар обратно',
-      example: 'Купил телефон две недели назад, обнаружил брак. Магазин отказывается принимать товар на возврат, ссылаясь на то, что гарантийный срок истек.'
-    },
-    {
-      title: 'Некачественные услуги',
-      description: 'Исполнитель выполнил работу плохо',
-      example: 'Заказал ремонт в квартире, подрядчик выполнил работу с нарушениями: кривые стены, протекают трубы. Отказывается исправлять недостатки.'
-    },
-    {
-      title: 'Проблемы с ЖКХ',
-      description: 'Управляющая компания не решает проблемы',
-      example: 'В квартире постоянно течет крыша, управляющая компания игнорирует заявки. Помещение повреждено, жить невозможно.'
-    }
-  ];
-
   return (
     <div className="home-page">
       <Navbar currentUser={currentUser} onLogout={handleLogout} />
@@ -153,19 +135,11 @@ const HomePage = () => {
 
               {currentUser && (
                 <div className="user-welcome">
-                  <p>Добро пожаловать, {currentUser.first_name || currentUser.email}!</p>
+                  <p>Добро пожаловать, {currentUser.name || currentUser.email}!</p>
                 </div>
               )}
 
               <div className="hero-stats">
-                <div className="stat">
-                  <div className="stat-number">500+</div>
-                  <div className="stat-label">Успешных обращений</div>
-                </div>
-                <div className="stat">
-                  <div className="stat-number">95%</div>
-                  <div className="stat-label">Положительных решений</div>
-                </div>
                 <div className="stat">
                   <div className="stat-number">2-3 мин</div>
                   <div className="stat-label">Среднее время генерации</div>
@@ -196,11 +170,6 @@ const HomePage = () => {
             <div className="section-header">
               <h2>Опишите вашу проблему</h2>
               <p>AI-помощник проанализирует ситуацию и предложит решение</p>
-              {!currentUser && (
-                <div className="auth-notice">
-                  <span>⚠️ Для создания документов требуется авторизация</span>
-                </div>
-              )}
             </div>
 
             <form onSubmit={handleSubmit} className="problem-form">
@@ -234,6 +203,12 @@ const HomePage = () => {
                 </div>
               </div>
 
+                {!currentUser && (
+                <div className="auth-notice" style={{ marginBottom: '20px', textAlign: 'center' }}>
+                  <span>⚠️ Для создания документов требуется авторизация</span>
+                </div>
+              )}
+
               {currentUser ? (
                 <Button
                   type="submit"
@@ -255,28 +230,7 @@ const HomePage = () => {
               )}
             </form>
 
-            {/* Quick Examples */}
-            <div className="quick-examples">
-              <h3>Примеры быстрого старта:</h3>
-              <div className="examples-grid">
-                {quickExamples.map((example, index) => (
-                  <div
-                    key={index}
-                    className="example-card"
-                    onClick={() => handleQuickStart(example.example)}
-                  >
-                    <div className="example-icon">
-                      {index === 0 ? '🛒' : index === 1 ? '🔧' : '🏠'}
-                    </div>
-                    <h4>{example.title}</h4>
-                    <p>{example.description}</p>
-                    <Button variant="text" size="small">
-                      Использовать пример →
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Quick Examples */}-
           </div>
         </section>
 
@@ -317,7 +271,7 @@ const HomePage = () => {
               <div className="feature-card">
                 <div className="feature-icon">📱</div>
                 <h3>Удобно</h3>
-                <p>Работайте с любого устройства в любое время</p>
+                <p>Общайтесь в свободном формате</p>
               </div>
             </div>
           </div>
@@ -343,7 +297,7 @@ const HomePage = () => {
                 <div className="step-number">2</div>
                 <div className="step-content">
                   <h3>AI анализирует</h3>
-                  <p>Наш ИИ изучает проблему и подбирает relevantные законы</p>
+                  <p>Наш ИИ изучает проблему и подбирает подходящие законы</p>
                 </div>
               </div>
               <div className="step">

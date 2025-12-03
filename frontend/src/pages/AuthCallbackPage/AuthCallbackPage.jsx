@@ -30,10 +30,10 @@ const AuthCallbackPage = () => {
 
             if (user) {
               setStatus('success');
-              // Перенаправляем на главную страницу через 2 секунды
+              // Перенаправляем на главную страницу через 1 секунду
               setTimeout(() => {
                 navigate('/', { replace: true });
-              }, 2000);
+              }, 1000); // Сокращаем время до 1 секунды
             } else {
               setStatus('error');
             }
@@ -68,7 +68,7 @@ const AuthCallbackPage = () => {
           <div className="auth-status success">
             <div className="success-icon">✅</div>
             <h2>Авторизация успешна!</h2>
-            <p>Вы будете перенаправлены на главную страницу...</p>
+            <p>Вы будете перенаправлены в личный кабинет...</p>
           </div>
         )}
 
@@ -79,7 +79,7 @@ const AuthCallbackPage = () => {
             <p>Не удалось завершить вход в систему. Пожалуйста, попробуйте снова.</p>
             <button
               className="retry-button"
-              onClick={() => navigate('/auth')}
+              onClick={() => navigate('/signin')}
             >
               Попробовать снова
             </button>

@@ -43,13 +43,6 @@ const AboutPage = () => {
     },
   ];
 
-  const milestones = [
-    { year: '2025', event: 'Начало разработки платформы' },
-    { year: '2026', event: 'Запуск бета-версии' },
-    { year: '2026', event: '500+ успешных обращений' },
-    { year: '2027', event: 'Планы: мобильное приложение' }
-  ];
-
   return (
     <div className="about-page">
       <Navbar />
@@ -137,7 +130,7 @@ const AboutPage = () => {
                 <div className="step-number">2</div>
                 <div className="step-content">
                   <h3>Подбор законов</h3>
-                  <p>Система находит relevantные нормативные акты</p>
+                  <p>Система находит подходящие нормативные акты</p>
                 </div>
               </div>
               <div className="process-step">
@@ -222,24 +215,7 @@ const AboutPage = () => {
           </div>
         </section>
 
-        {/* Timeline Section */}
-        <section className="timeline-section">
-          <div className="container">
-            <h2>Наш путь</h2>
-            <div className="timeline">
-              {milestones.map((milestone, index) => (
-                <div key={index} className="timeline-item">
-                  <div className="timeline-year">{milestone.year}</div>
-                  <div className="timeline-content">
-                    <div className="timeline-dot"></div>
-                    <p>{milestone.event}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
+        
         {/* CTA Section */}
         <section className="cta-section">
           <div className="container">
@@ -253,12 +229,6 @@ const AboutPage = () => {
                   size="large"
                 >
                   Создать документ
-                </Button>
-                <Button 
-                  variant="secondary"
-                  onClick={() => window.location.href = '/signin'}
-                >
-                  Войти в аккаунт
                 </Button>
               </div>
             </div>

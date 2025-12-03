@@ -29,11 +29,10 @@ const AuthPage = () => {
         <div className="auth-card">
           <div className="auth-header">
             <h1>Вход в систему</h1>
-            <p>Выберите способ авторизации</p>
           </div>
 
           <div className="social-auth">
-            <h3>Войти через соцсети</h3>
+            <h3>Войти через Google</h3>
             <div className="social-buttons">
               <Button
                 variant="secondary"
@@ -43,22 +42,7 @@ const AuthPage = () => {
                 <span className="social-icon">🔍</span>
                 Google
               </Button>
-              <Button
-                variant="secondary"
-                className="social-button yandex"
-                onClick={() => handleSocialAuth('Yandex')}
-              >
-                <span className="social-icon">Я</span>
-                Yandex
-              </Button>
-              <Button
-                variant="secondary"
-                className="social-button vk"
-                onClick={() => handleSocialAuth('VK')}
-              >
-                <span className="social-icon">ВК</span>
-                VK
-              </Button>
+
             </div>
           </div>
 

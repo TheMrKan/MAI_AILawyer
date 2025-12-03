@@ -111,12 +111,37 @@ export const userAPI = {
 };
 
 export const handleAuthSuccess = (authData) => {
+  console.log('Auth data received:', authData); // Для отладки
+
   if (authData.access_token) {
     localStorage.setItem('auth_token', authData.access_token);
   }
   if (authData.user) {
-    localStorage.setItem('user', JSON.stringify(authData.user));
-    return authData.user;
+    // Берем данные из Google
+    const googleFirstName = authData.user.first_name || '';
+    const googleLastName = authData.user.last_name || '';
+    const googleEmail = authData.user.email || '';
+    const googleAvatar = authData.user.avatar_url || '';
+
+    // Формируем имя для отображения
+    const displayName = googleFirstName && googleLastName
+      ? `${googleFirstName} ${googleLastName}`
+      : googleFirstName || googleLastName || googleEmail.split('@')[0] || 'Пользователь';
+
+    const userData = {
+      id: authData.user.id,
+      email: googleEmail,
+      name: displayName,
+      firstName: googleFirstName,
+      lastName: googleLastName,
+      avatar: googleAvatar,
+      joinDate: new Date().toLocaleDateString('ru-RU'),
+      phone: ''
+    };
+
+    console.log('Processed user data:', userData); // Для отладки
+    localStorage.setItem('user', JSON.stringify(userData));
+    return userData;
   }
   return null;
 };

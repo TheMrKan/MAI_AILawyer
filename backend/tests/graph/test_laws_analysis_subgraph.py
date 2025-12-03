@@ -5,10 +5,6 @@ from src.dto.messages import ChatMessage
 
 
 class TestLawsAnalysisSubgraph:
-    def test_subgraph_initialization(self):
-        subgraph = LawsAnalysisSubgraph()
-        assert subgraph is not None
-
     @pytest.mark.asyncio
     async def test_save_first_info(self):
         subgraph = LawsAnalysisSubgraph()

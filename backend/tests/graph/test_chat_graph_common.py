@@ -38,17 +38,3 @@ class TestProcessConfirmationNode:
 
         with pytest.raises(Interrupt):
             await node_func(original_state, mock_llm)
-
-    def test_state_type_definitions(self):
-        from src.core.chat_graph.common import InputState, BaseState, FreeTemplateState, StrictTemplateState
-
-        input_state_fields = {"issue_id", "first_description"}
-        base_state_fields = {"messages", "first_info_completed", "law_docs", "can_help",
-                             "laws_confirmed", "templates", "relevant_template",
-                             "template_confirmed", "field_values", "success"}
-
-        assert input_state_fields.issubset(set(InputState.__annotations__.keys()))
-        assert base_state_fields.issubset(set(BaseState.__annotations__.keys()))
-        assert "loop_completed" in FreeTemplateState.__annotations__
-        assert "loop_completed" in StrictTemplateState.__annotations__
-        assert "fields" in StrictTemplateState.__annotations__

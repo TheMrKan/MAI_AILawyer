@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch, MagicMock
 from fastapi import status
 import uuid
 
@@ -44,14 +44,12 @@ class TestAuthIntegration:
         assert "httponly" in cookie_attrs.lower()
         assert "samesite=lax" in cookie_attrs.lower()
 
-    @patch('src.api.routers.auth_service')
-    def test_token_verify_with_invalid_json(self, mock_auth_service, client):
+    def test_token_verify_with_invalid_json(self, client):
         response = client.post("/auth/token/verify", data="invalid json")
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    @patch('src.api.routers.auth_service')
-    def test_token_verify_missing_token_field(self, mock_auth_service, client):
+    def test_token_verify_missing_token_field(self, client):
         response = client.post("/auth/token/verify", json={"not_token": "value"})
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -63,28 +61,21 @@ class TestAuthIntegration:
         assert "/auth/google/callback" in routes
         assert "/auth/token/verify" in routes
 
-    @patch('src.api.routers.google_oauth')
-    def test_google_callback_without_cookie(self, mock_google_oauth, client):
-        with patch('src.api.routers.state_service.validate_state', return_value=True):
-            response = client.get(
-                "/auth/google/callback",
-                params={"code": "test_code", "state": "valid_state"}
-            )
+    def test_google_callback_without_cookie(self, client):
+        response = client.get(
+            "/auth/google/callback",
+            params={"code": "test_code", "state": "valid_state"}
+        )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.json()["detail"] == "Invalid state parameter"
 
-    @patch('src.api.routers.google_oauth')
-    @patch('src.api.routers.auth_service')
-    @patch('src.api.routers.UserRepository')
-    def test_google_callback_state_mismatch(self, mock_user_repo, mock_auth_service,
-                                            mock_google_oauth, client):
-        with patch('src.api.routers.state_service.validate_state', return_value=True):
-            client.cookies["oauth_state"] = "cookie_state"
-            response = client.get(
-                "/auth/google/callback",
-                params={"code": "test_code", "state": "different_state"}
-            )
+    def test_google_callback_state_mismatch(self, client):
+        client.cookies["oauth_state"] = "cookie_state"
+        response = client.get(
+            "/auth/google/callback",
+            params={"code": "test_code", "state": "different_state"}
+        )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.json()["detail"] == "Invalid state parameter"

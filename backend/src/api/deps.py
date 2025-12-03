@@ -6,10 +6,19 @@ import logging
 
 from src.application.provider import Scope
 from src.core.users.iface import AuthServiceABC, UserRepositoryABC
-from src.storage.sql.connection import get_db
+from src.storage.sql.connection import get_session
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer(auto_error=False)
+
+
+async def get_db_session() -> AsyncSession:
+    session = get_session()
+    try:
+        yield session
+        await session.commit()
+    except:
+        await session.rollback()
 
 
 def get_scope() -> Scope:
@@ -20,7 +29,7 @@ def get_scope() -> Scope:
 async def get_current_user(
         credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
         authorization: Optional[str] = Header(None),
-        db: AsyncSession = Depends(get_db),
+        db: AsyncSession = Depends(get_db_session),
         scope: Scope = Depends(get_scope)
 ):
     scope.set_scoped_value(db, AsyncSession)

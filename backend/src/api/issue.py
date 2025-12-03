@@ -9,8 +9,7 @@ from enum import Enum
 from src.core.chats.service import IssueChatService, GraphError
 from src.application.provider import Provider, Scope
 from src.core.chats.types import ChatMessage, MessageRole as DtoMessageRole
-from src.storage.sql.connection import get_db
-from src.api.deps import get_current_user, get_scope
+from src.api.deps import get_current_user, get_scope, get_db_session
 from src.core.results.iface import IssueResultFileStorageABC
 from src.core.issue_service import IssueService
 from src.storage.sql.models import Issue
@@ -52,7 +51,7 @@ class ChatStateSchema(BaseModel):
 async def get_issue_messages(
         issue_id: int,
         scope: Scope = Depends(get_scope),
-        db: AsyncSession = Depends(get_db),
+        db: AsyncSession = Depends(get_db_session),
 ) -> ChatStateSchema:
 
     scope.set_scoped_value(db, AsyncSession)
@@ -91,7 +90,7 @@ class IssueCreateRequestSchema(BaseModel):
 async def create_issue(
         issue_data: IssueCreateRequestSchema,
         scope: Scope = Depends(get_scope),
-        db: AsyncSession = Depends(get_db),
+        db: AsyncSession = Depends(get_db_session),
         current_user=Depends(get_current_user)
 ) -> IssueSchema:
 
@@ -155,7 +154,7 @@ async def chat(
 async def download_issue_file(
         issue_id: int,
         provider: Annotated[Provider, Depends(Provider)],
-        db: AsyncSession = Depends(get_db),
+        db: AsyncSession = Depends(get_db_session),
         current_user=Depends(get_current_user)
 ):
     try:

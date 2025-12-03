@@ -4,8 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
 from src.config import settings
-from src.storage.sql.connection import get_db
-from src.api.deps import get_scope
+from src.api.deps import get_scope, get_db_session
 from src.core.users.iface import AuthServiceABC, UserRepositoryABC
 from src.external.google_oauth import GoogleOAuth
 from src.application.provider import Provider, Scope
@@ -40,7 +39,7 @@ async def google_callback(
         code: str = None,
         state: str = None,
         error: str = None,
-        db: AsyncSession = Depends(get_db),
+        db: AsyncSession = Depends(get_db_session),
         scope: Scope = Depends(get_scope)
 ):
     scope.set_scoped_value(db, AsyncSession)

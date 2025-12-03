@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Dict
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas import UserCreate, Token
 
@@ -15,6 +16,11 @@ class OAuthProviderABC(ABC):
 
 
 class UserRepositoryABC(ABC):
+
+    @abstractmethod
+    def __init__(self, db: AsyncSession):
+        pass
+
     @abstractmethod
     async def get_by_email(self, email: str):
         pass
@@ -25,6 +31,10 @@ class UserRepositoryABC(ABC):
 
     @abstractmethod
     async def create(self, user_data: UserCreate):
+        pass
+
+    @abstractmethod
+    async def get_or_create(self, user_data: UserCreate):
         pass
 
 

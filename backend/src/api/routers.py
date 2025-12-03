@@ -5,9 +5,8 @@ import logging
 
 from src.config import settings
 from src.database.connection import get_db
-from src.core.users.iface import AuthServiceABC
+from src.core.users.iface import AuthServiceABC, UserRepositoryABC
 from src.external.google_oauth import GoogleOAuth
-from src.database.user import UserRepository
 from src.application.provider import Provider
 
 
@@ -70,7 +69,7 @@ async def google_callback(
 
     try:
         user_data = await google_oauth.get_user_info(code)
-        user_repo = UserRepository(db)
+        user_repo = provider[UserRepositoryABC, db]
         user = await user_repo.get_or_create(user_data)
         token_response = provider[AuthServiceABC].create_token_response(user)
 

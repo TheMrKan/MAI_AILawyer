@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 import logging
 
-from src.core.users.auth_service import auth_service
+from src.application.provider import Provider
+from src.core.users.iface import AuthServiceABC
 from src.database.user import UserRepository
 from src.database.connection import get_db
 
@@ -15,7 +16,8 @@ security = HTTPBearer(auto_error=False)
 async def get_current_user(
         credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
         authorization: Optional[str] = Header(None),
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
+        provider: Provider = Depends(Provider)
 ):
     token = None
     if credentials:
@@ -26,14 +28,12 @@ async def get_current_user(
     if not token:
         return None
 
-    token_data = auth_service.verify_token(token)
+    token_data = provider[AuthServiceABC].verify_token(token)
     if not token_data:
         return None
 
     user_repo = UserRepository(db)
     user = await user_repo.get_by_id(token_data.user_id)
-
-
 
     return user
 

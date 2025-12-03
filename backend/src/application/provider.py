@@ -3,12 +3,13 @@ from functools import wraps
 import inspect
 import os
 from pathlib import Path
+from typing import Any, Unpack
 
 
 class FactoryABC[T](ABC):
 
     @abstractmethod
-    def __call__(self) -> T:
+    def __call__(self, *args, **kwargs) -> T:
         pass
 
 
@@ -22,6 +23,16 @@ class Singleton[T](FactoryABC[T]):
         return self.__instance
 
 
+class Transient[T](FactoryABC[T]):
+    __cls: type[T]
+
+    def __init__(self, cls: type[T]):
+        self.__cls = cls
+
+    def __call__(self, *args, **kwargs) -> T:
+        return self.__cls(*args, **kwargs)
+
+
 global_provider: "Provider"
 
 
@@ -31,17 +42,19 @@ class Provider:
     def __init__(self):
         self.mapping = {Provider: Singleton(self)}
 
-    def __getitem__[IFACE](self, item: type[IFACE]) -> IFACE:
+    def __getitem__[IFACE](self, item: type[IFACE] | tuple[type[IFACE], Unpack[tuple[Any, ...]]]) -> IFACE:
+        if isinstance(item, tuple):
+            return self.resolve(item[0], *item[1:])
         return self.resolve(item)
 
     def __contains__(self, item: type) -> bool:
         return item in self.mapping.keys()
 
-    def resolve(self, interface: type):
-        return self.mapping[interface]()
+    def resolve(self, interface: type, *args, **kwargs):
+        return self.mapping[interface](*args, **kwargs)
 
-    def register_singleton[IFACE](self, interface: type[IFACE], instance: IFACE):
-        self.mapping[interface] = Singleton(instance)
+    def register[IFACE](self, iface: type[IFACE], factory: FactoryABC[IFACE]):
+        self.mapping[iface] = factory
 
 
 def inject_global(func):
@@ -63,12 +76,12 @@ async def build_async() -> Provider:
 
     from src.core.llm.iface import LLMABC
     from src.external.cerebras_llm import CerebrasLLM
-    provider.register_singleton(LLMABC, CerebrasLLM())
+    provider.register(LLMABC, Singleton(CerebrasLLM()))
 
     from src.core.chats.service import IssueChatService
     from langgraph.checkpoint.memory import InMemorySaver
     checkpointer = InMemorySaver()
-    provider.register_singleton(IssueChatService, IssueChatService(checkpointer))
+    provider.register(IssueChatService, Singleton(IssueChatService(checkpointer)))
 
     import chromadb
     chroma_client = await chromadb.AsyncHttpClient(host="chroma", port=8000)
@@ -77,16 +90,16 @@ async def build_async() -> Provider:
     from src.external.chroma_law_docs_repo import ChromaLawDocsRepository
     laws_repo = ChromaLawDocsRepository(chroma_client)
     await laws_repo.init_async()
-    provider.register_singleton(LawDocsRepositoryABC, laws_repo)
+    provider.register(LawDocsRepositoryABC, Singleton(laws_repo))
 
     from src.core.templates.iface import TemplatesRepositoryABC
     from src.external.chroma_templates_repo import ChromaTemplatesRepository
     templates_repo = ChromaTemplatesRepository(chroma_client)
     await templates_repo.init_async()
-    provider.register_singleton(TemplatesRepositoryABC, templates_repo)
+    provider.register(TemplatesRepositoryABC, Singleton(templates_repo))
 
     from src.core.templates.manager import TemplateManager
-    provider.register_singleton(TemplateManager, TemplateManager(templates_repo))
+    provider.register(TemplateManager, Singleton(TemplateManager(templates_repo)))
 
     from src.core.templates.iface import TemplatesFileStorageABC
     from src.external.fs_templates_storage import FilesystemTemplatesStorage
@@ -94,26 +107,30 @@ async def build_async() -> Provider:
     if not templates_dir.exists():
         raise Exception("TEMPLATES_DIR env var must be set")
     templates_storage = FilesystemTemplatesStorage(templates_dir)
-    provider.register_singleton(TemplatesFileStorageABC, templates_storage)
+    provider.register(TemplatesFileStorageABC, Singleton(templates_storage))
 
     from src.core.templates.content_service import TemplateContentService
-    provider.register_singleton(TemplateContentService, TemplateContentService(templates_storage))
+    provider.register(TemplateContentService, Singleton(TemplateContentService(templates_storage)))
 
     from src.core.results.iface import IssueResultFileStorageABC
     from src.external.fs_issue_result_storage import FilesystemIssueResultStorageABC
     results_dir = Path(os.getenv("RESULTS_DIR") or "")
     if not results_dir.exists():
         raise Exception("RESULTS_DIR env var must be set")
-    provider.register_singleton(IssueResultFileStorageABC, FilesystemIssueResultStorageABC(results_dir))
+    provider.register(IssueResultFileStorageABC, Singleton(FilesystemIssueResultStorageABC(results_dir)))
 
     from src.core.users.iface import OAuthProviderABC
     from src.external.google_oauth import GoogleOAuth
     google_oauth = GoogleOAuth()
-    provider.register_singleton(OAuthProviderABC, google_oauth)
-    provider.register_singleton(GoogleOAuth, google_oauth)
+    provider.register(OAuthProviderABC, Singleton(google_oauth))
+    provider.register(GoogleOAuth, Singleton(google_oauth))
 
     from src.core.users.iface import AuthServiceABC
     from src.core.users.auth_service import AuthService
-    provider.register_singleton(AuthServiceABC, AuthService())
+    provider.register(AuthServiceABC, Singleton(AuthService()))
+
+    from src.core.users.iface import UserRepositoryABC
+    from src.database.user import UserRepository
+    provider.register(UserRepositoryABC, Transient(UserRepository))
 
     return provider

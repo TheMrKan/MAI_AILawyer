@@ -1,10 +1,9 @@
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt
 import logging
-from typing import Literal
 
-from src.core.chat_graph.common import BaseState, InputState, create_process_confirmation_node
-from src.dto.messages import ChatMessage
+from src.core.chats.graph.common import BaseState, InputState, create_process_confirmation_node
+from src.core.chats.types import ChatMessage
 from src.core import llm_use_cases
 from src.core.laws import LawDocsRepositoryABC
 from src.core.llm import LLMABC

@@ -1,11 +1,11 @@
 import logging
 from langgraph.graph import StateGraph, START, END
 
-from src.core.chat_graph.common import BaseState, InputState
-from src.core.chat_graph.laws_analysis_subgraph import LawsAnalysisSubgraph
-from src.core.chat_graph.template_analysis_subgraph import TemplateAnalysisSubgraph
-from src.core.chat_graph.free_template_subgraph import FreeTemplateSubgraph
-from src.core.chat_graph.strict_template_subgraph import StrictTemplateSubgraph
+from src.core.chats.graph.common import BaseState, InputState
+from src.core.chats.graph.laws_analysis_subgraph import LawsAnalysisSubgraph
+from src.core.chats.graph.template_analysis_subgraph import TemplateAnalysisSubgraph
+from src.core.chats.graph.free_template_subgraph import FreeTemplateSubgraph
+from src.core.chats.graph.strict_template_subgraph import StrictTemplateSubgraph
 
 
 logger = logging.getLogger(__name__)

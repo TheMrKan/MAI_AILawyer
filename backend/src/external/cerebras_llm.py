@@ -5,7 +5,7 @@ from typing import Iterable
 
 from src.exceptions import ExternalRateLimitException
 from src.core.llm import LLMABC
-from src.dto.messages import ChatMessage, MessageRole
+from src.core.chats.types import ChatMessage, MessageRole
 
 
 class CerebrasLLM(LLMABC):

@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import Self
 from enum import Enum
 
-from src.dto.messages import ChatMessage, MessageRole as DtoMessageRole
+from src.core.chats.types import ChatMessage, MessageRole as DtoMessageRole
 
 
 class MessageRole(Enum):

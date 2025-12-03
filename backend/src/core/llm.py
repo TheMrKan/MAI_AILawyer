@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Iterable
 
-from src.dto.messages import ChatMessage, MessageRole
+from src.core.chats.types import ChatMessage
 
 
 class LLMABC(ABC):

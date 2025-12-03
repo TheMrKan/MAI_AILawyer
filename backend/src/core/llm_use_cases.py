@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import NamedTuple
 
 from src.core.llm import LLMABC
-from src.dto.messages import ChatMessage
+from src.core.chats.types import ChatMessage
 from src.dto.laws import LawFragment
 from src.core.templates.types import Template
 

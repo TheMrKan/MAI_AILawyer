@@ -1,11 +1,11 @@
 from langgraph.types import interrupt
 import logging
-from typing import TypedDict, Annotated
+from typing import TypedDict
 
 from src.application.provider import inject_global
 from src.core import llm_use_cases
 from src.core.llm import LLMABC
-from src.dto.messages import ChatMessage
+from src.core.chats.types import ChatMessage
 from src.dto.laws import LawFragment
 from src.core.templates.types import Template
 

@@ -4,8 +4,8 @@ from langgraph.types import Command, StateSnapshot
 import logging
 from dataclasses import dataclass
 
-from src.core.chat_graph.full_chat_graph import FullChatGraph, InputState
-from src.dto.messages import ChatMessage
+from src.core.chats.graph.full_chat_graph import FullChatGraph, InputState
+from src.core.chats.types import ChatMessage
 
 
 class GraphError(Exception):

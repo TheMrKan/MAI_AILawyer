@@ -1,21 +1,23 @@
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import StateGraph, START
 from langgraph.types import interrupt
 import logging
 
-from src.core import llm_use_cases
-from src.core.chat_graph.common import BaseState, StrictTemplateState, FreeTemplateState
-from src.core.llm import LLMABC
-from src.core.results.iface import IssueResultFileStorageABC
+from src.core.chats.graph.common import BaseState, FreeTemplateState
+from src.core.templates.service import TemplateService
 from src.core.templates.file_service import TemplateFileService
-from src.dto.messages import ChatMessage
+from src.core.results.iface import IssueResultFileStorageABC
+from src.core import llm_use_cases
+from src.core.llm import LLMABC
+from src.core.chats.types import ChatMessage
 from src.application.provider import inject_global
 
 
-class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, StrictTemplateState]):
+class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTemplateState]):
+
     __logger: logging.Logger
 
     def __init__(self):
-        super().__init__(BaseState)  # type: ignore
+        super().__init__(BaseState)    # type: ignore
         self.__logger = logging.getLogger(self.__class__.__name__)
 
         self.__build()
@@ -41,12 +43,14 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
     @inject_global
     async def __setup_loop(self,
                            state: BaseState,
+                           service: TemplateService,
                            file_service: TemplateFileService) -> FreeTemplateState:
         self.__logger.debug("Setting up QA loop...")
 
-        text = file_service.extract_text(state["relevant_template"])
+        free_template = await service.get_free_template_async()
+        text = file_service.extract_text(free_template)
 
-        return {"messages": state["messages"] + llm_use_cases.setup_strict_template_loop(state["relevant_template"], text)}
+        return {"messages": state["messages"] + llm_use_cases.setup_free_template_loop(free_template, text), "relevant_template": free_template}
 
     @inject_global
     async def __invoke_llm(self, state: FreeTemplateState, llm: LLMABC) -> FreeTemplateState:
@@ -67,8 +71,7 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
     @inject_global
     async def __prepare_field_values(self, state: FreeTemplateState, llm: LLMABC) -> FreeTemplateState:
         self.__logger.debug("Preparing field values...")
-        values = await llm_use_cases.prepare_strict_template_values_async(llm, state["messages"],
-                                                                        state["relevant_template"])
+        values = await llm_use_cases.prepare_free_template_values_async(llm, state["messages"], state["relevant_template"])
         self.__logger.debug("Prepared field values: %s", values)
 
         return {"field_values": values}

@@ -2,13 +2,12 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from enum import Enum
-from typing import Self, Annotated
+from typing import Annotated
 import logging
 
-from src.core.issue_chat_service import IssueChatService, GraphError
+from src.core.chats.service import IssueChatService, GraphError
 from src.application.provider import Provider
-from src.dto.messages import ChatMessage, MessageRole as DtoMessageRole
+from src.core.chats.types import ChatMessage, MessageRole as DtoMessageRole
 from src.database.connection import get_db
 from src.api.deps import get_current_user
 from src.core.results.iface import IssueResultFileStorageABC

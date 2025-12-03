@@ -65,7 +65,7 @@ async def build_async() -> Provider:
     from src.external.cerebras_llm import CerebrasLLM
     provider.register_singleton(LLMABC, CerebrasLLM())
 
-    from src.core.issue_chat_service import IssueChatService
+    from src.core.chats.service import IssueChatService
     from langgraph.checkpoint.memory import InMemorySaver
     checkpointer = InMemorySaver()
     provider.register_singleton(IssueChatService, IssueChatService(checkpointer))

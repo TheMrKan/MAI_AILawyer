@@ -1,7 +1,7 @@
 import asyncio
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, patch
 
 from src.main import app
 
@@ -14,16 +14,26 @@ def event_loop():
 
 
 @pytest.fixture(scope="function")
-async def mock_db_session():
+def mock_db_session():
     session = AsyncMock()
     session.commit = AsyncMock()
     session.rollback = AsyncMock()
     session.close = AsyncMock()
+
+    session.get = AsyncMock()
+    session.query = Mock(return_value=Mock(
+        filter=Mock(return_value=Mock(
+            first=AsyncMock()
+        ))
+    ))
+
     yield session
 
 
 @pytest.fixture(scope="function")
 def client(mock_db_session):
+    from src.database.connection import get_db
+
     async def override_get_db():
         try:
             yield mock_db_session
@@ -71,17 +81,9 @@ def mock_token():
 
 
 @pytest.fixture
-def skip_db_tests():
-    def _skip_if_uses_db(test_func):
-        import inspect
-        source = inspect.getsource(test_func)
-        db_keywords = ["session.query", "Session", "db.", "get_db", "select(", "insert("]
-
-        for keyword in db_keywords:
-            if keyword in source:
-                pytest.skip(f"Test uses database operations: {keyword}")
-                return
-
-        return test_func
-
-    return _skip_if_uses_db
+def mock_user_repository(mock_user):
+    with patch('src.api.routers.UserRepository') as mock_repo:
+        mock_repo_instance = AsyncMock()
+        mock_repo_instance.get_or_create = AsyncMock(return_value=mock_user)
+        mock_repo.return_value = mock_repo_instance
+        yield mock_repo_instance

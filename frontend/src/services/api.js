@@ -32,6 +32,10 @@ api.interceptors.response.use(
       window.location.href = '/auth';
     }
 
+    if (error.response?.status === 429) {
+      throw {name: "RateLimitError", message: ""};
+    }
+
     if (error.response) {
       // Сервер от ветил  с ошибкой пример
       const message = error.response.data?.detail || 'Произошла ошибка сервера';

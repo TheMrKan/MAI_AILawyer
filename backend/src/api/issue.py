@@ -69,9 +69,9 @@ async def create_issue(
         db: AsyncSession = Depends(get_db),
         current_user=Depends(get_current_user)
 ) -> IssueCreateResponseSchema:
-    try:
-        issue_service = IssueService(db)
 
+    issue_service = IssueService(db)
+    try:
         new_issue = await issue_service.create_issue(issue_data.text, current_user.id if current_user else None)
         chat_service = provider[IssueChatService]
         await chat_service.process_new_user_message(new_issue.id, issue_data.text)

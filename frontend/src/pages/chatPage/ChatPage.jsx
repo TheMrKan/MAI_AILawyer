@@ -72,10 +72,15 @@ const ChatPage = () => {
     setIsChatEnded(response.is_ended);
   };
 
-  const addErrorMessage = () => {
+  const addErrorMessage = (error) => {
+    let text = 'Произошла ошибка при отправке сообщения. Пожалуйста, попробуйте снова.';
+    if (error.name === "RateLimitError") {
+      text = "Использование нашего сервиса полностью бесплатно, поэтому мы вынуждены экономить.\nОдин из сервисов сейчас не справляется, пожалуйста, попробуйте позднее."
+    }
+
     const errorMessage = {
       id: Date.now(),
-      text: 'Произошла ошибка при отправке сообщения. Пожалуйста, попробуйте снова.',
+      text: text,
       sender: 'ai',
       timestamp: new Date()
     };
@@ -102,7 +107,7 @@ const ChatPage = () => {
       processApiResponse(response);
     } catch (error) {
       console.error('Error sending message:', error);
-      addErrorMessage();
+      addErrorMessage(error);
     } finally {
       setIsLoading(false);
     }

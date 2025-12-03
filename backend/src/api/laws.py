@@ -30,7 +30,6 @@ class AddOrUpdateLawFragmentSchema(BaseModel):
         return DtoLawFragment(fragment_id=self.fragment_id, document_id=self.document_id, content=self.content)
 
 
-
 @router.get("/", response_model=list[LawFragmentSchema])
 async def list_fragments(
     provider: Provider = Depends(Provider)

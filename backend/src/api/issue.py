@@ -2,8 +2,9 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Annotated
+from typing import Annotated, Self
 import logging
+from enum import Enum
 
 from src.core.chats.service import IssueChatService, GraphError
 from src.application.provider import Provider, Scope
@@ -11,13 +12,6 @@ from src.core.chats.types import ChatMessage, MessageRole as DtoMessageRole
 from src.storage.sql.connection import get_db
 from src.api.deps import get_current_user, get_scope
 from src.core.results.iface import IssueResultFileStorageABC
-from src.api.issue_schemas import (
-    MessageSchema,
-    ChatUpdateSchema,
-    IssueCreateResponseSchema,
-    IssueCreateRequestSchema,
-    AddUserMessageSchema
-)
 from src.core.issue_service import IssueService
 from src.storage.sql.models import Issue
 from src.exceptions import ExternalRateLimitException
@@ -32,24 +26,44 @@ def __should_message_be_returned(dto: ChatMessage) -> bool:
     return dto.role in (DtoMessageRole.USER, DtoMessageRole.AI)
 
 
+class MessageRole(Enum):
+    USER = "user"
+    AI = "ai"
+
+
+class MessageSchema(BaseModel):
+    role: MessageRole
+    text: str
+
+    @classmethod
+    def from_dto(cls, dto: ChatMessage) -> Self:
+        assert dto.role in (DtoMessageRole.USER, DtoMessageRole.AI), f"Only User and AI messages are allowed (got '{dto.role}')"
+        return {"text": dto.text,
+                "role": MessageRole.USER.value if dto.role == DtoMessageRole.USER else MessageRole.AI.value}
+
+
+class ChatStateSchema(BaseModel):
+    new_messages: list[MessageSchema]
+    is_ended: bool
+    success: bool
+
+
 @router.get('/{issue_id}/chat/')
 async def get_issue_messages(
         issue_id: int,
         scope: Scope = Depends(get_scope),
         db: AsyncSession = Depends(get_db),
-) -> ChatUpdateSchema:
+) -> ChatStateSchema:
 
     scope.set_scoped_value(db, AsyncSession)
 
     try:
-        issue_service = scope[IssueService]
-        issue = await issue_service.get_issue_by_id(issue_id)
+        issue = await scope[IssueService].get_issue_by_id(issue_id)
 
         if not issue:
             raise HTTPException(status_code=404, detail="Issue not found")
 
-        chat_service = scope[IssueChatService]
-        state = await chat_service.get_state(issue_id)
+        state = await scope[IssueChatService].get_state(issue_id)
 
         new_messages = [
             MessageSchema.from_dto(message)
@@ -57,11 +71,20 @@ async def get_issue_messages(
             if __should_message_be_returned(message)
         ]
 
-        return ChatUpdateSchema(new_messages=new_messages, is_ended=state.is_ended, success=state.success)
+        return ChatStateSchema(new_messages=new_messages, is_ended=state.is_ended, success=state.success)
 
     except Exception as e:
         logger.exception("Error getting issue messages", exc_info=e)
         raise HTTPException(status_code=500, detail="Failed to get messages")
+
+
+class IssueSchema(BaseModel):
+    issue_id: int
+    created_at: str
+
+
+class IssueCreateRequestSchema(BaseModel):
+    text: str
 
 
 @router.post('/create/')
@@ -70,7 +93,7 @@ async def create_issue(
         scope: Scope = Depends(get_scope),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(get_current_user)
-) -> IssueCreateResponseSchema:
+) -> IssueSchema:
 
     scope.set_scoped_value(db, AsyncSession)
 
@@ -94,13 +117,13 @@ async def create_issue(
 
     created_at = new_issue.created_at.strftime("%Y-%m-%d %H:%M:%S")
 
-    return IssueCreateResponseSchema(
+    return IssueSchema(
         issue_id=new_issue.id,
         created_at=created_at
     )
 
 
-class IssueCreateSchema(BaseModel):
+class AddUserMessageSchema(BaseModel):
     text: str
 
 
@@ -109,7 +132,7 @@ async def chat(
         issue_id: int,
         message: AddUserMessageSchema,
         provider: Annotated[Provider, Depends(Provider)]
-) -> ChatUpdateSchema:
+) -> ChatStateSchema:
     try:
         chat_service = provider[IssueChatService]
         state = await chat_service.process_new_user_message(issue_id, message.text)
@@ -125,7 +148,7 @@ async def chat(
         logger.exception("Internal error", exc_info=e)
         raise HTTPException(status_code=500, detail="Произошла непредвиденная ошибка")
 
-    return ChatUpdateSchema(new_messages=new_messages, is_ended=state.is_ended, success=state.success)
+    return ChatStateSchema(new_messages=new_messages, is_ended=state.is_ended, success=state.success)
 
 
 @router.get('/{issue_id}/download/')

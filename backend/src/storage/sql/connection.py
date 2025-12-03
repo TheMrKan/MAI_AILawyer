@@ -23,12 +23,14 @@ async_session = sessionmaker(
     expire_on_commit=False
 )
 
+
 async def get_db() -> AsyncSession:
     async with async_session() as session:
         try:
             yield session
         finally:
             await session.close()
+
 
 async def create_tables():
     async with engine.begin() as conn:

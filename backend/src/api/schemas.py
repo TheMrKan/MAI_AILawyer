@@ -27,7 +27,7 @@ class UserResponse(UserBase):
     created_at: datetime
 
     class Config:
-        from_attributes = True  # Замените orm_mode для Pydantic v2
+        from_attributes = True
 
 class Token(BaseModel):
     access_token: str

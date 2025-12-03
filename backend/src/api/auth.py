@@ -16,7 +16,7 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
 @router.get("/google")
-async def google_auth(provider: Provider = Depends(Provider)):
+async def google_auth(provider: Provider = Depends(Provider)) -> RedirectResponse:
     google_oauth = provider[GoogleOAuth]
 
     state = google_oauth.generate_state()

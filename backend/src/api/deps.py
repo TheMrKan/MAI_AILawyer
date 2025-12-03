@@ -4,21 +4,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 import logging
 
-from src.application.provider import Provider, Scope
-from src.core.users.iface import AuthServiceABC
-from src.storage.sql.user_repository import UserRepository
+from src.application.provider import Scope
+from src.core.users.iface import AuthServiceABC, UserRepositoryABC
 from src.storage.sql.connection import get_db
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer(auto_error=False)
 
 
+def get_scope() -> Scope:
+    from src.application import provider
+    return Scope(provider.global_provider)
+
+
 async def get_current_user(
         credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
         authorization: Optional[str] = Header(None),
         db: AsyncSession = Depends(get_db),
-        provider: Provider = Depends(Provider)
+        scope: Scope = Depends(get_scope)
 ):
+    scope.set_scoped_value(db, AsyncSession)
+
     token = None
     if credentials:
         token = credentials.credentials
@@ -28,27 +34,11 @@ async def get_current_user(
     if not token:
         return None
 
-    token_data = provider[AuthServiceABC].verify_token(token)
+    token_data = scope[AuthServiceABC].verify_token(token)
     if not token_data:
         return None
 
-    user_repo = UserRepository(db)
+    user_repo = scope[UserRepositoryABC]
     user = await user_repo.get_by_id(token_data.user_id)
 
     return user
-
-
-async def get_current_active_user(
-        current_user=Depends(get_current_user)
-):
-    if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive"
-        )
-    return current_user
-
-
-def get_scope() -> Scope:
-    from src.application import provider
-    return Scope(provider.global_provider)

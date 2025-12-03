@@ -17,6 +17,10 @@ class OAuthProviderABC(ABC):
 class UserRepositoryABC(ABC):
 
     @abstractmethod
+    async def get_by_id(self, user_id: str):
+        pass
+
+    @abstractmethod
     async def get_by_email(self, email: str):
         pass
 

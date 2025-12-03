@@ -3,6 +3,7 @@ from sqlalchemy import select
 from src.database.models import Issue
 from typing import Optional
 
+
 class IssueService:
     def __init__(self, db: AsyncSession):
         self.db = db

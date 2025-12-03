@@ -4,8 +4,9 @@ import logging
 
 from src.core.chats.graph.common import BaseState, InputState, create_process_confirmation_node
 from src.core.chats.types import ChatMessage
-from src.core.laws import LawDocsRepositoryABC
-from src.core.llm import LLMABC, use_cases
+from src.core.laws.iface import LawDocsRepositoryABC
+from src.core.llm.iface import LLMABC
+from src.core.llm import use_cases as llm_use_cases
 from src.application.provider import inject_global
 
 

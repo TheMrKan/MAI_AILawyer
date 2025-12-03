@@ -5,6 +5,7 @@ import logging
 
 from src.config import settings
 from src.database.connection import get_db
+from src.api.deps import get_scope
 from src.core.users.iface import AuthServiceABC, UserRepositoryABC
 from src.external.google_oauth import GoogleOAuth
 from src.application.provider import Provider, Scope
@@ -40,9 +41,9 @@ async def google_callback(
         state: str = None,
         error: str = None,
         db: AsyncSession = Depends(get_db),
-        scope: Scope = Depends(Scope)
+        scope: Scope = Depends(get_scope)
 ):
-    scope.set_scoped_value(db)
+    scope.set_scoped_value(db, AsyncSession)
 
     if error:
         if hasattr(settings, 'FRONTEND_URL') and settings.FRONTEND_URL:

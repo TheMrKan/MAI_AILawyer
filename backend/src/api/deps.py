@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 import logging
 
-from src.application.provider import Provider
+from src.application.provider import Provider, Scope
 from src.core.users.iface import AuthServiceABC
 from src.database.user import UserRepository
 from src.database.connection import get_db
@@ -47,3 +47,8 @@ async def get_current_active_user(
             detail="User account is inactive"
         )
     return current_user
+
+
+def get_scope() -> Scope:
+    from src.application import provider
+    return Scope(provider.global_provider)

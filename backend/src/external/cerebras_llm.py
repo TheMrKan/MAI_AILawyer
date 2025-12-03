@@ -4,7 +4,7 @@ from cerebras.cloud.sdk.types.chat.chat_completion import ChatCompletionResponse
 from typing import Iterable
 
 from src.exceptions import ExternalRateLimitException
-from src.core.llm import LLMABC
+from src.core.llm.iface import LLMABC
 from src.core.chats.types import ChatMessage, MessageRole
 
 

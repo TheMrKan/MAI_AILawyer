@@ -9,7 +9,7 @@ from src.core.chats.service import IssueChatService, GraphError
 from src.application.provider import Provider, Scope
 from src.core.chats.types import ChatMessage, MessageRole as DtoMessageRole
 from src.database.connection import get_db
-from src.api.deps import get_current_user
+from src.api.deps import get_current_user, get_scope
 from src.core.results.iface import IssueResultFileStorageABC
 from src.api.issue_schemas import (
     MessageSchema,
@@ -35,11 +35,11 @@ def __should_message_be_returned(dto: ChatMessage) -> bool:
 @router.get('/{issue_id}/chat/')
 async def get_issue_messages(
         issue_id: int,
-        scope: Annotated[Scope, Depends(Scope)],
+        scope: Scope = Depends(get_scope),
         db: AsyncSession = Depends(get_db),
 ) -> ChatUpdateSchema:
 
-    scope.set_scoped_value(db)
+    scope.set_scoped_value(db, AsyncSession)
 
     try:
         issue_service = scope[IssueService]
@@ -67,12 +67,12 @@ async def get_issue_messages(
 @router.post('/create/')
 async def create_issue(
         issue_data: IssueCreateRequestSchema,
-        scope: Annotated[Scope, Depends(Scope)],
+        scope: Scope = Depends(get_scope),
         db: AsyncSession = Depends(get_db),
         current_user=Depends(get_current_user)
 ) -> IssueCreateResponseSchema:
 
-    scope.set_scoped_value(db)
+    scope.set_scoped_value(db, AsyncSession)
 
     issue_service = scope[IssueService]
     try:

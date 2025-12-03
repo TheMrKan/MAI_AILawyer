@@ -3,7 +3,8 @@ from langgraph.types import interrupt
 import logging
 
 from src.core.chats.graph.common import BaseState, StrictTemplateState, FreeTemplateState
-from src.core.llm import LLMABC, use_cases
+from src.core.llm.iface import LLMABC
+from src.core.llm import use_cases as llm_use_cases
 from src.core.results.iface import IssueResultFileStorageABC
 from src.core.templates.content_service import TemplateContentService
 from src.core.chats.types import ChatMessage

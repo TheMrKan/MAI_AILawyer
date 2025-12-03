@@ -1,4 +1,4 @@
-from src.core.laws import LawDocsRepositoryABC
+from src.core.laws.iface import LawDocsRepositoryABC
 from src.core.laws.types import LawFragment
 from src.external.base_chroma_repository import BaseChromaRepository
 

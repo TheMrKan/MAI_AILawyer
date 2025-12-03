@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Response
 from pydantic import BaseModel
 import logging
 
-from src.core.laws import LawDocsRepositoryABC
+from src.core.laws.iface import LawDocsRepositoryABC
 from src.application.provider import Provider
 from src.core.laws.types import LawFragment as DtoLawFragment
 

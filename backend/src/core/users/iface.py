@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Dict
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas import UserCreate, Token
 

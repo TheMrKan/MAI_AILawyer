@@ -3,13 +3,13 @@ from functools import wraps
 import inspect
 import os
 from pathlib import Path
-from typing import Any, Unpack, Callable
+from typing import Any, Self, Callable
 
 
 class ServiceResolverABC(ABC):
 
     @abstractmethod
-    def resolve[IFACE](self, interface: type[IFACE], resolver: ServiceResolverABC | None = None) -> IFACE:
+    def resolve[IFACE](self, interface: type[IFACE], resolver: Self | None = None) -> IFACE:
         pass
 
     @abstractmethod
@@ -95,9 +95,9 @@ class Provider(ServiceResolverABC):
 class Scope(ServiceResolverABC):
 
     __scope_instances: dict[type, Any]
-    parent: ServiceResolverABC
+    parent: ServiceResolverABC | None
 
-    def __init__(self, parent: ServiceResolverABC, *instances: Any):
+    def __init__(self, parent: ServiceResolverABC | None = None, *instances: Any):
         self.parent = parent
         self.__scope_instances = {type(i): i for i in instances}
 
@@ -106,10 +106,12 @@ class Scope(ServiceResolverABC):
         if value:
             return value
 
-        return self.parent.resolve(interface, resolver or self)
+        if self.parent:
+            return self.parent.resolve(interface, resolver or self)
+        raise KeyError
 
     def __contains__(self, item: type) -> bool:
-        return item in self.__scope_instances.keys() or item in self.parent
+        return item in self.__scope_instances.keys() or (self.parent and item in self.parent)
 
     def __getitem__[IFACE](self, item: type[IFACE]) -> IFACE:
         return self.resolve(item)
@@ -179,5 +181,8 @@ async def build_async() -> Provider:
     from src.core.users.iface import UserRepositoryABC
     from src.database.user import UserRepository
     provider.register(UserRepositoryABC, Transient(UserRepository))
+
+    from src.core.issue_service import IssueService
+    provider.register(IssueService, Transient(IssueService))
 
     return provider

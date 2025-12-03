@@ -15,6 +15,7 @@ from src.application import provider
 
 load_dotenv()
 
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     from src.database.connection import create_tables
@@ -24,7 +25,6 @@ async def lifespan(_app: FastAPI):
     provider.global_provider = provider_instance
 
     _app.dependency_overrides[provider.Provider] = lambda: provider_instance
-    _app.dependency_overrides[provider.Scope] = lambda: provider.Scope(provider_instance)
 
     _app.include_router(issue_router)
     _app.include_router(laws_router)

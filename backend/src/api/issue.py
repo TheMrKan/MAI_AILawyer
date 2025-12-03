@@ -12,7 +12,6 @@ from src.core.chats.types import ChatMessage, MessageRole as DtoMessageRole
 from src.api.deps import get_current_user, get_scope, get_db_session
 from src.core.results.iface import IssueResultFileStorageABC
 from src.core.issue_service import IssueService
-from src.storage.sql.models import Issue
 from src.exceptions import ExternalRateLimitException
 
 
@@ -63,13 +62,11 @@ async def get_issue_messages(
             raise HTTPException(status_code=404, detail="Issue not found")
 
         state = await scope[IssueChatService].get_state(issue_id)
-
         new_messages = [
             MessageSchema.from_dto(message)
             for message in state.messages
             if __should_message_be_returned(message)
         ]
-
         return ChatStateSchema(new_messages=new_messages, is_ended=state.is_ended, success=state.success)
 
     except Exception as e:
@@ -101,16 +98,12 @@ async def create_issue(
         new_issue = await issue_service.create_issue(issue_data.text, current_user.id if current_user else None)
         chat_service = scope[IssueChatService]
         await chat_service.process_new_user_message(new_issue.id, issue_data.text)
-        logger.info(f"Graph started for issue {new_issue.id}")
-
-        await issue_service.commit_issue(new_issue)
         logger.info(f"New issue created: {new_issue.text}")
 
     except ExternalRateLimitException as e:
         logger.exception("Rate limit", exc_info=e)
         raise HTTPException(status_code=429, detail="Ограничение на внешнем сервисе")
     except Exception as e:
-        await issue_service.rollback_issue()
         logger.exception(f"Failed to create issue: {e}")
         raise HTTPException(status_code=500, detail="Failed to create issue")
 
@@ -153,21 +146,22 @@ async def chat(
 @router.get('/{issue_id}/download/')
 async def download_issue_file(
         issue_id: int,
-        provider: Annotated[Provider, Depends(Provider)],
+        scope: Annotated[Scope, Depends(get_scope)],
         db: AsyncSession = Depends(get_db_session),
         current_user=Depends(get_current_user)
 ):
-    try:
-        storage = provider[IssueResultFileStorageABC]
+    scope.set_scoped_value(db, AsyncSession)
 
-        issue = await db.get(Issue, issue_id)
+    issue_service = scope[IssueService]
+    try:
+        issue = await issue_service.get_issue_by_id(issue_id)
         if not issue:
             raise HTTPException(status_code=404, detail="Issue not found")
 
-        if current_user is not None and issue.user_id != current_user.id:
+        if not issue_service.can_download_result(issue, current_user):
             raise HTTPException(status_code=403, detail="Access denied")
 
-        with storage.read_issue_result_file(issue_id) as file:
+        with scope[IssueResultFileStorageABC].read_issue_result_file(issue_id) as file:
             return StreamingResponse(
                 file,
                 media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",

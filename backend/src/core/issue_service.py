@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from src.storage.sql.models import Issue
+from src.storage.sql.models import Issue, User
 from typing import Optional
 
 
@@ -17,11 +17,6 @@ class IssueService:
         await self.db.flush()
         return new_issue
 
-    async def commit_issue(self, issue: Issue) -> Issue:
-        await self.db.commit()
-        await self.db.refresh(issue)
-        return issue
-
     async def get_issue_by_id(self, issue_id: int) -> Optional[Issue]:
         result = await self.db.execute(
             select(Issue).where(
@@ -30,5 +25,9 @@ class IssueService:
         )
         return result.scalar_one_or_none()
 
-    async def rollback_issue(self) -> None:
-        await self.db.rollback()
+    @staticmethod
+    def can_download_result(issue: Issue, user: User | None) -> bool:
+        if not user:
+            return False
+
+        return issue.user_id == user.id

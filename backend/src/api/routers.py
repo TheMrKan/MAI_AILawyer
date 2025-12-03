@@ -7,7 +7,7 @@ from src.config import settings
 from src.database.connection import get_db
 from src.core.users.iface import AuthServiceABC, UserRepositoryABC
 from src.external.google_oauth import GoogleOAuth
-from src.application.provider import Provider
+from src.application.provider import Provider, Scope
 
 
 logger = logging.getLogger(__name__)
@@ -40,8 +40,10 @@ async def google_callback(
         state: str = None,
         error: str = None,
         db: AsyncSession = Depends(get_db),
-        provider: Provider = Depends(Provider)
+        scope: Scope = Depends(Scope)
 ):
+    scope.set_scoped_value(db)
+
     if error:
         if hasattr(settings, 'FRONTEND_URL') and settings.FRONTEND_URL:
             redirect_url = f"{settings.FRONTEND_URL}/auth/callback?error=auth_failed"
@@ -60,7 +62,7 @@ async def google_callback(
 
     cookie_state = request.cookies.get("oauth_state")
 
-    google_oauth = provider[GoogleOAuth]
+    google_oauth = scope[GoogleOAuth]
     if not cookie_state or not google_oauth.validate_state(cookie_state) or state != cookie_state:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -69,9 +71,9 @@ async def google_callback(
 
     try:
         user_data = await google_oauth.get_user_info(code)
-        user_repo = provider[UserRepositoryABC, db]
+        user_repo = scope[UserRepositoryABC]
         user = await user_repo.get_or_create(user_data)
-        token_response = provider[AuthServiceABC].create_token_response(user)
+        token_response = scope[AuthServiceABC].create_token_response(user)
 
         response_data = {
             "access_token": token_response.access_token,

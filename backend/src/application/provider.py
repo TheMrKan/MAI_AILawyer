@@ -3,13 +3,52 @@ from functools import wraps
 import inspect
 import os
 from pathlib import Path
-from typing import Any, Unpack
+from typing import Any, Unpack, Callable
+
+
+class ServiceResolverABC(ABC):
+
+    @abstractmethod
+    def resolve[IFACE](self, interface: type[IFACE], resolver: ServiceResolverABC | None = None) -> IFACE:
+        pass
+
+    @abstractmethod
+    def __contains__(self, item: type) -> bool:
+        pass
+
+    @abstractmethod
+    def __getitem__[IFACE](self, item: type[IFACE]) -> IFACE:
+        pass
+
+
+global_provider: "Provider"
+
+
+def _get_injectables(func: Callable, source: ServiceResolverABC) -> dict[str, Any]:
+    values = {}
+    sig = inspect.signature(func)
+    for pname, pvalue in sig.parameters.items():
+        if pvalue.annotation not in source:
+            continue
+
+        values[pname] = source.resolve(pvalue.annotation)
+    return values
+
+
+def inject_global(func: Callable):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        injectables = _get_injectables(func, global_provider)
+        kwargs.update(injectables)
+        return await func(*args, **kwargs)
+
+    return wrapper
 
 
 class FactoryABC[T](ABC):
 
     @abstractmethod
-    def __call__(self, *args, **kwargs) -> T:
+    def __call__(self, resolver: ServiceResolverABC) -> T:
         pass
 
 
@@ -19,7 +58,7 @@ class Singleton[T](FactoryABC[T]):
     def __init__(self, instance: T):
         self.__instance = instance
 
-    def __call__(self, *args, **kwargs) -> T:
+    def __call__(self, resolver: ServiceResolverABC) -> T:
         return self.__instance
 
 
@@ -29,46 +68,54 @@ class Transient[T](FactoryABC[T]):
     def __init__(self, cls: type[T]):
         self.__cls = cls
 
-    def __call__(self, *args, **kwargs) -> T:
-        return self.__cls(*args, **kwargs)
+    def __call__(self, resolver: ServiceResolverABC) -> T:
+        injectables = _get_injectables(self.__cls, resolver)
+        return self.__cls(**injectables)
 
 
-global_provider: "Provider"
-
-
-class Provider:
+class Provider(ServiceResolverABC):
     mapping: dict[type, FactoryABC]
 
     def __init__(self):
         self.mapping = {Provider: Singleton(self)}
 
-    def __getitem__[IFACE](self, item: type[IFACE] | tuple[type[IFACE], Unpack[tuple[Any, ...]]]) -> IFACE:
-        if isinstance(item, tuple):
-            return self.resolve(item[0], *item[1:])
+    def __getitem__[IFACE](self, item: type[IFACE]) -> IFACE:
         return self.resolve(item)
 
     def __contains__(self, item: type) -> bool:
         return item in self.mapping.keys()
 
-    def resolve(self, interface: type, *args, **kwargs):
-        return self.mapping[interface](*args, **kwargs)
+    def resolve[IFACE](self, interface: type[IFACE], resolver: ServiceResolverABC | None = None) -> IFACE:
+        return self.mapping[interface](resolver)
 
     def register[IFACE](self, iface: type[IFACE], factory: FactoryABC[IFACE]):
         self.mapping[iface] = factory
 
 
-def inject_global(func):
-    @wraps(func)
-    async def wrapper(*args, **kwargs):
-        sig = inspect.signature(func)
-        for pname, pvalue in sig.parameters.items():
-            if pvalue.annotation not in global_provider:
-                continue
+class Scope(ServiceResolverABC):
 
-            kwargs[pname] = global_provider[pvalue.annotation]
-        return await func(*args, **kwargs)
+    __scope_instances: dict[type, Any]
+    parent: ServiceResolverABC
 
-    return wrapper
+    def __init__(self, parent: ServiceResolverABC, *instances: Any):
+        self.parent = parent
+        self.__scope_instances = {type(i): i for i in instances}
+
+    def resolve[IFACE](self, interface: type[IFACE], resolver: ServiceResolverABC | None = None) -> IFACE:
+        value = self.__scope_instances.get(interface, None)
+        if value:
+            return value
+
+        return self.parent.resolve(interface, resolver or self)
+
+    def __contains__(self, item: type) -> bool:
+        return item in self.__scope_instances.keys() or item in self.parent
+
+    def __getitem__[IFACE](self, item: type[IFACE]) -> IFACE:
+        return self.resolve(item)
+
+    def set_scoped_value[IFACE](self, value: IFACE, iface: type[IFACE] | None = None):
+        self.__scope_instances[iface or type(value)] = value
 
 
 async def build_async() -> Provider:

@@ -107,13 +107,3 @@ async def google_callback(
             detail="Authentication failed"
         )
 
-
-@router.post("/token/verify")
-async def verify_token(token: str):
-    token_data = auth_service.verify_token(token)
-    if not token_data:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
-        )
-    return {"valid": True, "user_id": token_data.user_id, "email": token_data.email}

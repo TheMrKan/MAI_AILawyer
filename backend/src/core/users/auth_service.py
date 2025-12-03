@@ -44,7 +44,7 @@ class AuthService(AuthServiceABC):
         except JWTError:
             return None
 
-    def create_token_response(self, user):
+    def create_token_response(self, user) -> Token:
         access_token = self.create_access_token(str(user.id), user.email)
 
         return Token(
@@ -61,6 +61,3 @@ class AuthService(AuthServiceABC):
                 created_at=user.created_at,
             )
         )
-
-
-auth_service = AuthService()

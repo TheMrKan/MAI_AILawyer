@@ -83,5 +83,3 @@ class GoogleOAuth:
             last_name=user_info.get("family_name", ""),
             avatar_url=user_info.get("picture")
         )
-
-google_oauth = GoogleOAuth()

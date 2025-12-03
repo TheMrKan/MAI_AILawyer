@@ -1,20 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+import logging
 
 from src.config import settings
 from src.database.connection import get_db
-from src.external.google_oauth import google_oauth
-from src.core.users.auth_service import auth_service
+from src.core.users.iface import AuthServiceABC
+from src.external.google_oauth import GoogleOAuth
 from src.database.user import UserRepository
-import logging
+from src.application.provider import Provider
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
 @router.get("/google")
-async def google_auth():
+async def google_auth(provider: Provider = Depends(Provider)):
+    google_oauth = provider[GoogleOAuth]
+
     state = google_oauth.generate_state()
     auth_url = google_oauth.get_authorization_url(state)
 
@@ -37,6 +41,7 @@ async def google_callback(
         state: str = None,
         error: str = None,
         db: AsyncSession = Depends(get_db),
+        provider: Provider = Depends(Provider)
 ):
     if error:
         if hasattr(settings, 'FRONTEND_URL') and settings.FRONTEND_URL:
@@ -55,6 +60,8 @@ async def google_callback(
         )
 
     cookie_state = request.cookies.get("oauth_state")
+
+    google_oauth = provider[GoogleOAuth]
     if not cookie_state or not google_oauth.validate_state(cookie_state) or state != cookie_state:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -65,7 +72,7 @@ async def google_callback(
         user_data = await google_oauth.get_user_info(code)
         user_repo = UserRepository(db)
         user = await user_repo.get_or_create(user_data)
-        token_response = auth_service.create_token_response(user)
+        token_response = provider[AuthServiceABC].create_token_response(user)
 
         response_data = {
             "access_token": token_response.access_token,
@@ -107,8 +114,9 @@ async def google_callback(
 
 
 @router.post("/token/verify")
-async def verify_token(token: str):
-    token_data = auth_service.verify_token(token)
+async def verify_token(token: str,
+                       provider: Provider = Depends(Provider)):
+    token_data = provider[AuthServiceABC].verify_token(token)
     if not token_data:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -61,7 +61,7 @@ def inject_global(func):
 async def build_async() -> Provider:
     provider = Provider()
 
-    from src.core.llm import LLMABC
+    from src.core.llm.iface import LLMABC
     from src.external.cerebras_llm import CerebrasLLM
     provider.register_singleton(LLMABC, CerebrasLLM())
 
@@ -73,7 +73,7 @@ async def build_async() -> Provider:
     import chromadb
     chroma_client = await chromadb.AsyncHttpClient(host="chroma", port=8000)
 
-    from src.core.laws import LawDocsRepositoryABC
+    from src.core.laws.iface import LawDocsRepositoryABC
     from src.external.chroma_law_docs_repo import ChromaLawDocsRepository
     laws_repo = ChromaLawDocsRepository(chroma_client)
     await laws_repo.init_async()
@@ -105,5 +105,15 @@ async def build_async() -> Provider:
     if not results_dir.exists():
         raise Exception("RESULTS_DIR env var must be set")
     provider.register_singleton(IssueResultFileStorageABC, FilesystemIssueResultStorageABC(results_dir))
+
+    from src.core.users.iface import OAuthProviderABC
+    from src.external.google_oauth import GoogleOAuth
+    google_oauth = GoogleOAuth()
+    provider.register_singleton(OAuthProviderABC, google_oauth)
+    provider.register_singleton(GoogleOAuth, google_oauth)
+
+    from src.core.users.iface import AuthServiceABC
+    from src.core.users.auth_service import AuthService
+    provider.register_singleton(AuthServiceABC, AuthService())
 
     return provider

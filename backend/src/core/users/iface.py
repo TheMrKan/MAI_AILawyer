@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Dict
 
-from src.api.schemas import UserCreate
+from src.api.schemas import UserCreate, Token
 
 
 class OAuthProviderABC(ABC):
@@ -30,9 +30,13 @@ class UserRepositoryABC(ABC):
 
 class AuthServiceABC(ABC):
     @abstractmethod
-    def create_access_token(self, user_id: str) -> str:
+    def create_access_token(self, user_id: str, email: str) -> str:
         pass
 
     @abstractmethod
     def verify_token(self, token: str) -> Optional[Dict]:
+        pass
+
+    @abstractmethod
+    def create_token_response(self, user) -> Token:
         pass

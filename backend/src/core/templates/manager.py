@@ -1,9 +1,16 @@
 
 from src.core.templates.iface import TemplatesRepositoryABC
 from src.core.templates.types import Template
+from src.application.provider import Provider, Registerable, Singleton
 
 
-class TemplateManager:
+class TemplateManager(Registerable):
+    __REG_ORDER__ = 1
+
+    @classmethod
+    async def on_build_provider(cls, provider: Provider):
+        repo = provider[TemplatesRepositoryABC]
+        provider.register(TemplateManager, Singleton(TemplateManager(repo)))
 
     __repository: TemplatesRepositoryABC
 

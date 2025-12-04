@@ -3,7 +3,14 @@ from functools import wraps
 import inspect
 import os
 from pathlib import Path
-from typing import Any, Self, Callable
+from typing import Any, Self, Callable, overload
+import pkgutil
+import importlib
+import logging
+
+
+_logger = logging.getLogger(__name__)
+global_provider: "Provider"
 
 
 class ServiceResolverABC(ABC):
@@ -19,9 +26,6 @@ class ServiceResolverABC(ABC):
     @abstractmethod
     def __getitem__[IFACE](self, item: type[IFACE]) -> IFACE:
         pass
-
-
-global_provider: "Provider"
 
 
 def _get_injectables(func: Callable, source: ServiceResolverABC) -> dict[str, Any]:
@@ -120,69 +124,52 @@ class Scope(ServiceResolverABC):
         self.__scope_instances[iface or type(value)] = value
 
 
+class Registerable(ABC):
+
+    __REG_ORDER__ = 0
+
+    @classmethod
+    @abstractmethod
+    async def on_build_provider(cls, provider: Provider):
+        pass
+
+
+def __find_registerables() -> list[tuple[int, type[Registerable]]]:
+    result = []
+    unique = set()
+
+    import src
+    package_path = Path(src.__file__).parent
+
+    for module_info in pkgutil.walk_packages([str(package_path)], "src."):
+        module = importlib.import_module(module_info.name)
+
+        for _, obj in inspect.getmembers(module, inspect.isclass):
+            if obj in unique:
+                continue
+
+            if issubclass(obj, Registerable) and obj is not Registerable:
+                if hasattr(obj, "__REG_ORDER__"):
+                    priority = getattr(obj, "__REG_ORDER__")
+                else:
+                    priority = 0
+                unique.add(obj)
+                result.append((priority, obj))
+
+    result.sort(key=lambda i: i[0])
+    return result
+
+
 async def build_async() -> Provider:
     provider = Provider()
 
-    from src.core.llm.iface import LLMABC
-    from src.external.cerebras_llm import CerebrasLLM
-    provider.register(LLMABC, Singleton(CerebrasLLM()))
+    registerables = __find_registerables()
+    _logger.info("Found %s registerable classes...", len(registerables))
 
-    from src.core.chats.service import IssueChatService
-    from langgraph.checkpoint.memory import InMemorySaver
-    checkpointer = InMemorySaver()
-    provider.register(IssueChatService, Singleton(IssueChatService(checkpointer)))
-
-    import chromadb
-    chroma_client = await chromadb.AsyncHttpClient(host="chroma", port=8000)
-
-    from src.core.laws.iface import LawDocsRepositoryABC
-    from src.storage.chroma.chroma_law_docs_repo import ChromaLawDocsRepository
-    laws_repo = ChromaLawDocsRepository(chroma_client)
-    await laws_repo.init_async()
-    provider.register(LawDocsRepositoryABC, Singleton(laws_repo))
-
-    from src.core.templates.iface import TemplatesRepositoryABC
-    from src.storage.chroma.chroma_templates_repo import ChromaTemplatesRepository
-    templates_repo = ChromaTemplatesRepository(chroma_client)
-    await templates_repo.init_async()
-    provider.register(TemplatesRepositoryABC, Singleton(templates_repo))
-
-    from src.core.templates.manager import TemplateManager
-    provider.register(TemplateManager, Singleton(TemplateManager(templates_repo)))
-
-    from src.core.templates.iface import TemplatesFileStorageABC
-    from src.storage.filesystem.fs_templates_storage import FilesystemTemplatesStorage
-    templates_dir = Path(os.getenv("TEMPLATES_DIR") or "")
-    if not templates_dir.exists():
-        raise Exception("TEMPLATES_DIR env var must be set")
-    templates_storage = FilesystemTemplatesStorage(templates_dir)
-    provider.register(TemplatesFileStorageABC, Singleton(templates_storage))
-
-    from src.core.templates.content_service import TemplateContentService
-    provider.register(TemplateContentService, Singleton(TemplateContentService(templates_storage)))
-
-    from src.core.results.iface import IssueResultFileStorageABC
-    from src.storage.filesystem.fs_issue_result_storage import FilesystemIssueResultStorageABC
-    results_dir = Path(os.getenv("RESULTS_DIR") or "")
-    if not results_dir.exists():
-        raise Exception("RESULTS_DIR env var must be set")
-    provider.register(IssueResultFileStorageABC, Singleton(FilesystemIssueResultStorageABC(results_dir)))
-
-    from src.core.users.iface import OAuthProviderABC
-    from src.external.google_oauth import GoogleOAuth
-    google_oauth = GoogleOAuth()
-    provider.register(OAuthProviderABC, Singleton(google_oauth))
-    provider.register(GoogleOAuth, Singleton(google_oauth))
-
-    from src.core.users.iface import AuthServiceABC
-    from src.core.users.auth_service import AuthService
-    provider.register(AuthServiceABC, Singleton(AuthService()))
-
-    from src.core.users.iface import UserRepositoryABC
-    from src.storage.sql.user_repository import UserRepository
-    provider.register(UserRepositoryABC, Transient(UserRepository))
-
-    from src.core.issue_service import IssueService
-    provider.register(IssueService, Transient(IssueService))
+    for priority, cls in registerables:
+        try:
+            await cls.on_build_provider(provider)
+        except Exception as e:
+            _logger.error("Failed to register class %s in provider", cls, exc_info=e)
 
     return provider

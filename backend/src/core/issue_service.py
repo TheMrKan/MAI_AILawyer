@@ -4,9 +4,15 @@ from typing import Optional
 
 from src.core.users.types import UserInfo
 from src.storage.sql.models import Issue
+from src.application.provider import Registerable, Provider, Transient
 
 
-class IssueService:
+class IssueService(Registerable):
+
+    @classmethod
+    async def on_build_provider(cls, provider: Provider):
+        provider.register(IssueService, Transient(cls))
+
     def __init__(self, db: AsyncSession):
         self.db = db
 

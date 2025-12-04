@@ -1,9 +1,19 @@
+import chromadb
+
 from src.core.laws.iface import LawDocsRepositoryABC
 from src.core.laws.types import LawFragment
 from src.storage.chroma.base_chroma_repository import BaseChromaRepository
+from src.application.provider import Registerable, Singleton, Provider
 
 
-class ChromaLawDocsRepository(BaseChromaRepository, LawDocsRepositoryABC):
+class ChromaLawDocsRepository(BaseChromaRepository, LawDocsRepositoryABC, Registerable):
+
+    @classmethod
+    async def on_build_provider(cls, provider: Provider):
+        client = provider[chromadb.AsyncClientAPI]
+        laws_repo = cls(client)
+        await laws_repo.init_async()
+        provider.register(LawDocsRepositoryABC, Singleton(laws_repo))
 
     _COLLECTION_NAME = "laws"
 

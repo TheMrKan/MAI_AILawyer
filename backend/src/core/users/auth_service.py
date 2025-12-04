@@ -4,9 +4,15 @@ from jose import jwt, JWTError
 from src.config import settings
 from src.core.users.types import UserInfo, AuthToken
 from src.core.users.iface import AuthServiceABC
+from src.application.provider import Registerable, Provider, Singleton
 
 
-class AuthService(AuthServiceABC):
+class AuthService(AuthServiceABC, Registerable):
+
+    @classmethod
+    async def on_build_provider(cls, provider: Provider):
+        provider.register(AuthServiceABC, Singleton(cls()))
+
     def __init__(self):
         self.secret_key = settings.SECRET_KEY
         self.jwt_algorithm = settings.ALGORITHM

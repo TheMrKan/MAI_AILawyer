@@ -6,9 +6,14 @@ from typing import Iterable
 from src.exceptions import ExternalRateLimitException
 from src.core.llm.iface import LLMABC
 from src.core.chats.types import ChatMessage, MessageRole
+from src.application.provider import Registerable, Provider, Singleton
 
 
-class CerebrasLLM(LLMABC):
+class CerebrasLLM(LLMABC, Registerable):
+
+    @classmethod
+    async def on_build_provider(cls, provider: Provider):
+        provider.register(LLMABC, Singleton(cls()))
 
     ROLES_MAP = {
         MessageRole.SYSTEM: "system",

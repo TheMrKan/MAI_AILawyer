@@ -1,10 +1,12 @@
 import pydantic
 from typing import Literal
 import json
+import chromadb
 
 from src.core.templates.iface import TemplatesRepositoryABC
 from src.core.templates.types import Template, TemplateField
 from src.storage.chroma.base_chroma_repository import BaseChromaRepository
+from src.application.provider import Registerable, Singleton, Provider
 
 
 class _TemplateField(pydantic.BaseModel):
@@ -19,7 +21,14 @@ class _TemplateMetadata(pydantic.BaseModel):
     fields: str | None = None
 
 
-class ChromaTemplatesRepository(BaseChromaRepository, TemplatesRepositoryABC):
+class ChromaTemplatesRepository(BaseChromaRepository, TemplatesRepositoryABC, Registerable):
+
+    @classmethod
+    async def on_build_provider(cls, provider: Provider):
+        client = provider[chromadb.AsyncClientAPI]
+        templates_repo = cls(client)
+        await templates_repo.init_async()
+        provider.register(TemplatesRepositoryABC, Singleton(templates_repo))
 
     _COLLECTION_NAME = "templates"
 

@@ -5,9 +5,15 @@ import uuid
 from src.storage.sql.models import User
 from src.core.users.iface import UserRepositoryABC
 from src.core.users.types import UserInfo, UserSSOInfo
+from src.application.provider import Registerable, Provider, Transient
 
 
-class UserRepository(UserRepositoryABC):
+class UserRepository(UserRepositoryABC, Registerable):
+
+    @classmethod
+    async def on_build_provider(cls, provider: Provider):
+        provider.register(UserRepositoryABC, Transient(cls))
+
     def __init__(self, db: AsyncSession):
         self.db = db
 

@@ -3,6 +3,7 @@ import logging
 
 
 class BaseChromaRepository:
+
     _COLLECTION_NAME = ""
 
     __client: chromadb.AsyncClientAPI

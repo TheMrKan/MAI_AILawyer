@@ -5,9 +5,17 @@ import time
 from src.core.users.iface import OAuthProviderABC
 from src.core.users.types import UserSSOInfo
 from src.config import settings
+from src.application.provider import Registerable, Provider, Singleton
 
 
-class GoogleOAuth(OAuthProviderABC):
+class GoogleOAuth(OAuthProviderABC, Registerable):
+
+    @classmethod
+    async def on_build_provider(cls, provider: Provider):
+        google_oauth = cls()
+        provider.register(OAuthProviderABC, Singleton(google_oauth))
+        provider.register(GoogleOAuth, Singleton(google_oauth))
+
     AUTH_STATE_TTL = 600
 
     def __init__(self):

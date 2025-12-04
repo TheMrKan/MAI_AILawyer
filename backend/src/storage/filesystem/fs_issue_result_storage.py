@@ -4,9 +4,17 @@ from typing import Generator, BinaryIO
 from contextlib import contextmanager
 
 from src.core.results.iface import IssueResultFileStorageABC
+from src.application.provider import Registerable, Provider, Singleton
 
 
-class FilesystemIssueResultStorageABC(IssueResultFileStorageABC):
+class FilesystemIssueResultStorageABC(IssueResultFileStorageABC, Registerable):
+
+    @classmethod
+    async def on_build_provider(cls, provider: Provider):
+        results_dir = Path(os.getenv("RESULTS_DIR") or "")
+        if not results_dir.exists():
+            raise Exception("RESULTS_DIR env var must be set")
+        provider.register(IssueResultFileStorageABC, Singleton(cls(results_dir)))
 
     __path: os.PathLike
 

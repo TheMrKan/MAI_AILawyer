@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from src.core.chats.graph.full_chat_graph import FullChatGraph, InputState
 from src.core.chats.types import ChatMessage
+from src.application.provider import Registerable, Provider, Singleton
 
 
 class GraphError(Exception):
@@ -19,7 +20,12 @@ class IssueChatState:
     success: bool
 
 
-class IssueChatService:
+class IssueChatService(Registerable):
+
+    @classmethod
+    async def on_build_provider(cls, provider: Provider):
+        checkpointer = provider[BaseCheckpointSaver]
+        provider.register(IssueChatService, Singleton(cls(checkpointer)))
 
     checkpointer: BaseCheckpointSaver
     graph: CompiledStateGraph

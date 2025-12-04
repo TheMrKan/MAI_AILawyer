@@ -11,6 +11,5 @@ class IssueResultFileStorageABC(ABC):
         pass
 
     @abstractmethod
-    @contextmanager
-    def read_issue_result_file(self, issue_id: int) -> Generator[BinaryIO, None, None]:
+    def read_issue_result_file(self, issue_id: int) -> BinaryIO:
         pass

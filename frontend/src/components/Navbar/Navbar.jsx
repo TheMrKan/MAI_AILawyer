@@ -1,10 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import './Navbar.scss';
 
-const Navbar = ({ currentUser, onLogout }) => {
+const Navbar = ({ onLogout }) => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setCurrentUser(JSON.parse(storedUser));
+      }
+    } catch (err) {
+      console.error("Failed to load user from LS", err);
+    }
+  }, []);
 
   return (
     <nav className="navbar">

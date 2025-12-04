@@ -16,6 +16,7 @@ const ChatPage = () => {
   const [isChatEnded, setIsChatEnded] = useState(false);
   const [documentData, setDocumentData] = useState(null);
   const messagesEndRef = useRef(null);
+  const [isSuccess, setIsSuccess] = useState(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -25,42 +26,33 @@ const ChatPage = () => {
     scrollToBottom();
   }, [messages]);
 
-  let loadCalled = false;
+  const loadCalled = useRef(false);
 
-  useEffect(() => {
-  loadChat();
-    }, []); // вызывается один раз
+    useEffect(() => {
+      loadChat();
+    }, []);
 
-  const loadChat = () => {
-      if (!loadCalled) {
-          loadCalled = true;
-          return;
-      }
+    const loadChat = () => {
+      if (loadCalled.current) return;
+      loadCalled.current = true;
 
-      try {
-          issueAPI.getChatHistory(requestId).then((history) => {
-              console.log(history);
-              const newMessages = history.new_messages.map(msg => ({
-                  id: Date.now() + Math.random(),
-                  text: msg.text,
-                  sender: msg.role === 'user' ? 'user' : 'ai',
-                  timestamp: new Date()
-                }));
+      issueAPI.getChatHistory(requestId).then((history) => {
+        const newMessages = history.new_messages.map(msg => ({
+          id: Date.now() + Math.random(),
+          text: msg.text,
+          sender: msg.role === 'user' ? 'user' : 'ai',
+          timestamp: new Date()
+        }));
 
-                setMessages(prev => [...prev, ...newMessages]);
-                console.log("Set is chat ended")
-                setIsChatEnded(history.is_ended);
-          });
+        setMessages(prev => [...prev, ...newMessages]);
 
-      }
-    catch (error) {
-          console.log(error);
-    }
-
-  };
+        setIsChatEnded(history.is_ended);
+        setIsSuccess(history.success);
+      });
+    };
 
   const processApiResponse = (response) => {
-      const messagesToAdd = response.new_messages.slice(1);
+    const messagesToAdd = response.new_messages.slice(1);
     const newMessages = messagesToAdd.map(msg => ({
       id: Date.now() + Math.random(),
       text: msg.text,
@@ -70,6 +62,11 @@ const ChatPage = () => {
 
     setMessages(prev => [...prev, ...newMessages]);
     setIsChatEnded(response.is_ended);
+
+    // Обновляем success статус
+    if (response.success !== undefined) {
+      setIsSuccess(response.success);
+    }
   };
 
   const addErrorMessage = (error) => {
@@ -99,7 +96,7 @@ const ChatPage = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setCurrentMessage('');  
+    setCurrentMessage('');
 
     setIsLoading(true);
     try {
@@ -111,51 +108,43 @@ const ChatPage = () => {
     } finally {
       setIsLoading(false);
     }
-};
-
-
+  };
 
   const handleDownloadDocument = async () => {
-  setIsLoading(true);
+      setIsLoading(true);
 
-  try {
-    const response = await fetch(`http://localhost:8000/issue/${requestId}/download/`, {
-      method: 'GET',
-      credentials: 'include'
-    });
+      try {
+        const response = await issueAPI.downloadDocument(requestId);
 
-    if (!response.ok) {
-      throw new Error('Ошибка загрузки документа');
-    }
+        // Проверяем, что ответ содержит данные
+        if (!response.data || response.data.byteLength === 0) {
+          throw new Error('Пустой ответ от сервера');
+        }
 
-    const blob = await response.blob();
+        // Создаем Blob
+        const blob = new Blob([response.data], {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        });
 
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
+        // Создаем URL для скачивания
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `issue_${requestId}_result.docx`;
 
-    // имя можно брать из заголовка, если сервер отдает
-    const disposition = response.headers.get('Content-Disposition');
-    let filename = 'document.docx';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
 
-    if (disposition && disposition.includes('filename=')) {
-      filename = disposition.split('filename=')[1].replace(/"/g, '');
-    }
 
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
 
-    link.remove();
-    window.URL.revokeObjectURL(url);
-
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+      } catch (err) {
+        console.error('Ошибка при скачивании:', err);
+        alert('Не удалось скачать документ. Пожалуйста, попробуйте позже.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
   const handleContinueEditing = () => {
     setIsChatEnded(false);
@@ -167,22 +156,22 @@ const ChatPage = () => {
   };
 
   const formatTime = (date) => {
-    return date.toLocaleTimeString('ru-RU', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return date.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
   return (
     <div className="chat-page">
       <Navbar />
-      
+
       <div className="chat-container">
         {/* Хедер чата */}
         <div className="chat-header">
           <div className="chat-info">
-            <Button 
-              variant="text" 
+            <Button
+              variant="text"
               onClick={() => navigate('/')}
               className="back-button"
             >
@@ -191,10 +180,10 @@ const ChatPage = () => {
             <h1>Диалог с AI-помощником</h1>
             <p>ID запроса: <span className="request-id">{requestId}</span></p>
           </div>
-          
+
           <div className="chat-actions">
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               onClick={() => navigate('/account')}
               size="small"
             >
@@ -230,7 +219,7 @@ const ChatPage = () => {
                   </div>
                 </div>
               ))}
-              
+
               {isLoading && (
                 <div className="message message-ai">
                   <div className="message-avatar">🤖</div>
@@ -248,32 +237,65 @@ const ChatPage = () => {
               )}
             </div>
           )}
-          
+
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Секция готового документа */}
+
         {isChatEnded && (
           <div className="document-section">
-            <div className="document-card">
-              <div className="document-header">
-                <div className="document-icon">🎉</div>
-                <div className="document-info">
-                  <h3>Ваш документ готов!</h3>
+            {isSuccess ? (
+              <div className="document-card">
+                <div className="document-header">
+                  <div className="document-icon">
+                    🎉
+                  </div>
+                  <div className="document-info">
+                    <h3>Ваш документ готов!</h3>
+                    <p>AI-помощник подготовил документ для вашей проблемы</p>
+                  </div>
+                </div>
+
+                <div className="document-details">
+                  <div className="detail-item">
+                    <span className="label">Статус:</span>
+                    <span className="value">Готов к скачиванию</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="label">Анализ:</span>
+                    <span className="value">Проблема подтверждена</span>
+                  </div>
+                </div>
+
+                <div className="document-actions">
+                  <Button
+                    variant="primary"
+                    onClick={handleDownloadDocument}
+                    loading={isLoading}
+                    className="action-btn"
+                  >
+                    📥 Скачать DOCX
+                  </Button>
                 </div>
               </div>
-
-              <div className="document-actions">
-                <Button 
-                  variant="primary"
-                  onClick={handleDownloadDocument}
-                  loading={isLoading}
-                  className="action-btn"
-                >
-                  📥 Скачать DOCX
-                </Button>
+            ) : (
+             <div className="no-document-message">
+                <p>
+                  <strong>AI-помощник не нашел юридической проблемы, требующей оформления документа.</strong>
+                  <br />
+                  Возможно, ваша ситуация уже решена или не требует юридического вмешательства.
+                </p>
+                <div className="document-actions">
+                  <Button
+                    variant="secondary"
+                    onClick={() => navigate('/')}
+                    className="action-btn"
+                  >
+                    👉 Создать новый запрос
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -289,8 +311,8 @@ const ChatPage = () => {
                 className="chat-input"
                 disabled={isLoading}
               />
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="send-button"
                 disabled={isLoading || !currentMessage.trim()}
                 loading={isLoading}

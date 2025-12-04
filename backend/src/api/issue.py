@@ -162,14 +162,14 @@ async def download_issue_file(
         if not issue_service.can_download_result(issue, current_user):
             raise HTTPException(status_code=403, detail="Access denied")
 
-        with scope[IssueResultFileStorageABC].read_issue_result_file(issue_id) as file:
-            return StreamingResponse(
-                file,
-                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                headers={
-                    "Content-Disposition": f"attachment; filename=issue_{issue_id}_result.docx"
-                }
-            )
+        file = scope[IssueResultFileStorageABC].read_issue_result_file(issue_id)
+        return StreamingResponse(
+            file,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                "Content-Disposition": f"attachment; filename=issue_{issue_id}_result.docx"
+            }
+        )
 
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found for this issue")

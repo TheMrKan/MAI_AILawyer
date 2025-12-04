@@ -17,6 +17,38 @@ const HomePage = () => {
 
   // Проверяем авторизацию при загрузке и обновляем состояние
   useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const user = await userAPI.getMe();
+        if (user.id === "") {
+          return;
+        }
+
+        // нормализация данных
+        const normalized = {
+          id: user.id,
+          email: user.email,
+          name: `${user.first_name || ''} ${user.last_name || ''}`.trim()
+              || user.email.split('@')[0],
+          avatar: user.avatar_url,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          joinDate: user.created_at,
+          phone: user.phone ?? '',
+        };
+
+        setCurrentUser(normalized);
+        localStorage.setItem('user', JSON.stringify(normalized));
+
+      } catch (error) {
+        console.error("Error loading user profile:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+
+
     const checkAuth = () => {
       const user = localStorage.getItem('user');
       if (user) {
@@ -30,8 +62,7 @@ const HomePage = () => {
       }
     };
 
-    // Проверяем авторизацию при загрузке
-    checkAuth();
+    loadUserData().then(checkAuth);
 
     // Слушаем события изменения localStorage (для обновления при авторизации из других вкладок)
     window.addEventListener('storage', checkAuth);
@@ -306,7 +337,7 @@ const HomePage = () => {
                 <div className="step-number">3</div>
                 <div className="step-content">
                   <h3>Получите документ</h3>
-                  <p>Готовый документ в форматах DOCX или PDF</p>
+                  <p>Готовый документ в формате DOCX</p>
                 </div>
               </div>
               <div className="step">

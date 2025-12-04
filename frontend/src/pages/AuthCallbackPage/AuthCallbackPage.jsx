@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { handleAuthSuccess } from '../../services/api';
+import { handleAuthSuccess, userAPI } from '../../services/api';
 import './AuthCallbackPage.scss';
 
 const AuthCallbackPage = () => {
@@ -20,30 +20,35 @@ const AuthCallbackPage = () => {
           return;
         }
 
-        if (dataParam) {
+        if (!dataParam) {
+          setStatus('error');
+          return;
+        }
+
+        try {
+          // Декодируем данные из URL
+          const authData = JSON.parse(decodeURIComponent(dataParam));
+
+          // Сохраняем токен
+          handleAuthSuccess(authData);
+
+          // Теперь тянем профиль
           try {
-            // Декодируем данные из URL
-            const authData = JSON.parse(decodeURIComponent(dataParam));
+            const user = await userAPI.getMe();
+            localStorage.setItem('user', JSON.stringify(user));
 
-            // Сохраняем токен и пользователя
-            const user = handleAuthSuccess(authData);
-
-            if (user) {
-              setStatus('success');
-              // Перенаправляем на главную страницу через 1 секунду
-              setTimeout(() => {
-                navigate('/', { replace: true });
-              }, 1000); // Сокращаем время до 1 секунды
-            } else {
-              setStatus('error');
-            }
-          } catch (parseError) {
-            console.error('Error parsing auth data:', parseError);
+            setStatus('success');
+            setTimeout(() => navigate('/', { replace: true }), 1000);
+          } catch (e) {
+            console.error('Failed to fetch /me:', e);
             setStatus('error');
           }
-        } else {
+
+        } catch (parseError) {
+          console.error('Error parsing auth data:', parseError);
           setStatus('error');
         }
+
       } catch (err) {
         console.error('Auth processing error:', err);
         setStatus('error');

@@ -26,10 +26,9 @@ api.interceptors.response.use(
     console.error('API Error:', error);
 
     if (error.response?.status === 401) {
-      // Если токен невалидный, разлогиниваем пользователя
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user');
-      window.location.href = '/auth';
+      window.location.href = '/signin';
     }
 
     if (error.response?.status === 429) {
@@ -84,33 +83,52 @@ export const issueAPI = {
       console.error('Error getting chat history:', error);
       throw error;
     }
-  }
+  },
+
+  // Скачивание документа
+  async downloadDocument(issueId) {
+      try {
+        const response = await api.get(`/issue/${issueId}/download/`, {
+          responseType: 'arraybuffer', // Меняем на arraybuffer
+          timeout: 60000,
+          headers: {
+            'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          }
+        });
+
+        return response;
+      } catch (error) {
+        console.error('Error downloading document:', error);
+
+        // Более информативные ошибки
+        if (error.response?.status === 404) {
+          throw new Error('Документ не найден');
+        } else if (error.response?.status === 403) {
+          throw new Error('Нет доступа к документу');
+        } else if (error.response?.status === 500) {
+          throw new Error('Ошибка сервера при генерации документа');
+        }
+
+        throw error;
+      }
+    },
+
 };
 
 export const userAPI = {
   async googleAuth() {
-    window.location.href = `${API_BASE_URL}auth/google`;
+    window.location.href = `${API_BASE_URL}/auth/google`;
   },
 
-  async verifyToken(token) {
-    const response = await api.post('/auth/token/verify', { token });
-    return response.data;
-  },
-
-  async getProfile() {
-    const response = await api.get('/user/profile');
-    return response.data;
-  },
-
-  async updateProfile(userData) {
-    const response = await api.put('/user/profile', userData);
+  async getMe() {
+    const response = await api.get('/profile/me');
     return response.data;
   },
 
   logout() {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
-    window.location.href = '/';
+    window.location.href = '/auth';
   }
 };
 

@@ -22,6 +22,9 @@ router = APIRouter(prefix="/issue")
 
 
 def __should_message_be_returned(dto: ChatMessage) -> bool:
+    """
+    Исключает системные сообщения из выдачи
+    """
     return dto.role in (DtoMessageRole.USER, DtoMessageRole.AI)
 
 
@@ -44,7 +47,14 @@ class MessageSchema(BaseModel):
 class ChatStateSchema(BaseModel):
     new_messages: list[MessageSchema]
     is_ended: bool
+    """
+    Чат завершен, новые сообщения отправлять нельзя.
+    """
     success: bool
+    """
+    True, если чат завершен генерацией документа.
+    False, если пользователь отказался от продолжения, агент не нашел проблемы и т. д.
+    """
 
 
 @router.get('/{issue_id}/chat/')
@@ -53,6 +63,9 @@ async def get_issue_messages(
         scope: Scope = Depends(get_scope),
         db: AsyncSession = Depends(get_db_session),
 ) -> ChatStateSchema:
+    """
+    Возвращает историю сообщений в чате обращения. Также возвращает is_ended и success.
+    """
 
     scope.set_scoped_value(db, AsyncSession)
 
@@ -91,6 +104,12 @@ async def create_issue(
         db: AsyncSession = Depends(get_db_session),
         current_user=Depends(get_current_user)
 ) -> IssueSchema:
+    """
+    Создает новый issue в БД и чат к нему.
+    Сразу обрабатывает первое сообщение и возвращает ответ агента.
+    Возвращает новую историю сообщений начиная с переданного message.
+    :return:
+    """
 
     scope.set_scoped_value(db, AsyncSession)
 
@@ -126,6 +145,10 @@ async def chat(
         message: AddUserMessageSchema,
         provider: Annotated[Provider, Depends(Provider)]
 ) -> ChatStateSchema:
+    """
+    Добавляет новое сообщение в существующий чат и возвращает ответ агента.
+    Возвращает новую историю сообщений начиная с переданного message.
+    """
     try:
         chat_service = provider[IssueChatService]
         state = await chat_service.process_new_user_message(issue_id, message.text)
@@ -151,6 +174,9 @@ async def download_issue_file(
         db: AsyncSession = Depends(get_db_session),
         current_user: UserInfo = Depends(get_current_user)
 ):
+    """
+    Отдает выходной файл обращения в формате docx.
+    """
     scope.set_scoped_value(db, AsyncSession)
 
     issue_service = scope[IssueService]

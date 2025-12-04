@@ -11,6 +11,9 @@ from src.application.provider import inject_global
 
 
 class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
+    """
+    Подграф анализа начальной информации и подходящих правовых актов.
+    """
 
     __logger: logging.Logger
 
@@ -45,6 +48,10 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
         self.add_node("confirm0", create_process_confirmation_node("laws_confirmed", self.__logger))
 
     async def __save_first_info(self, state: InputState) -> BaseState:
+        """
+        Сохраняет первичное описание проблемы от пользователя в историю сообщений.
+        Добавляет начальную системную инструкцию для агента.
+        """
         system_message = llm_use_cases.get_start_system_message()
         first_user_message = ChatMessage.from_user(state["first_description"])
 
@@ -53,6 +60,11 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
 
     @inject_global
     async def __analyze_info(self, state: BaseState, llm: LLMABC) -> BaseState:
+        """
+        Итерация цикла-вопросов ответов для начальной информации.
+        LLM обрабатывает предыдущее сообщение и решает, какой вопрос задать пользователю.
+        Если информации достаточно, в состояние записывается first_info_completed = True и цикл должен завершиться.
+        """
         self.__logger.info(f"Analyzing given info...")
 
         result = await llm_use_cases.analyze_first_info_async(llm, state["messages"])
@@ -62,6 +74,12 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
         return {"messages": [*state["messages"], ChatMessage.from_ai(result.user_message)]}
 
     def __handle_answer(self, state: BaseState):
+        """
+        Прерывает выполнение графа через interrupt.
+        Граф должен быть возобновлен с новым сообщением пользователя.
+        Сообщение будет добавлено в messages.
+        Никак не анализирует ответ пользователя, только сохраняет в историю.
+        """
         user_input = interrupt(None)
         user_message = ChatMessage.from_user(user_input)
         self.__logger.debug("Got user answer: %s", user_input)
@@ -70,6 +88,9 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
 
     @inject_global
     async def __find_law_documents(self, state: BaseState, llm: LLMABC, repo: LawDocsRepositoryABC) -> BaseState:
+        """
+        Ищет наиболее релевантные правовые акты в базе и сохраняет их в law_docs в порядке убывания релевантности.
+        """
         query = await llm_use_cases.prepare_laws_query_async(llm, state["messages"])
         self.__logger.debug("Prepared laws query: %s", query)
 
@@ -80,11 +101,19 @@ class LawsAnalysisSubgraph(StateGraph[BaseState, None, InputState, BaseState]):
 
     @inject_global
     async def __analyze_law_documents(self, state: BaseState, llm: LLMABC) -> BaseState:
+        """
+        Анализирует проблему на основе предыдущей информации и найденных правовых актов из law_docs.
+        """
         acts_analysis_result = await llm_use_cases.analyze_acts_async(llm, state["messages"], state["law_docs"])
         self.__logger.info(f"Acts analysis result: {acts_analysis_result}")
         return {"can_help": acts_analysis_result.can_help, "messages": state["messages"] + acts_analysis_result.messages}
 
     def __continue_if_true(self, key: str):
+        """
+        Создает функцию-ноду, возвращающую 'continue', если по указанному ключу находится True.
+        Иначе возвращает END. Используется для маршрутизации после подтверждения пользователя.
+        """
+
         def wrapper(state: BaseState):
             self.__logger.info(f"Edge check true ({key}): {state[key]}")
             if not state[key]:

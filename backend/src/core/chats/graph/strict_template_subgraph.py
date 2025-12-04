@@ -12,6 +12,10 @@ from src.application.provider import inject_global
 
 
 class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, StrictTemplateState]):
+    """
+    Подграф генерации документа по строгому шаблону.
+    Вызывается, если relevant_template != None
+    """
     __logger: logging.Logger
 
     def __init__(self):
@@ -41,7 +45,11 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
     @inject_global
     async def __setup_loop(self,
                            state: BaseState,
-                           file_service: TemplateContentService) -> FreeTemplateState:
+                           file_service: TemplateContentService) -> StrictTemplateState:
+        """
+        Добавляет в чат инструкции по дальнейшему циклу вопросов-ответов.
+        Инструкции включают текст шаблона и поля с инструкциями.
+        """
         self.__logger.debug("Setting up QA loop...")
 
         text = file_service.extract_text(state["relevant_template"])
@@ -49,7 +57,12 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
         return {"messages": state["messages"] + llm_use_cases.setup_strict_template_loop(state["relevant_template"], text)}
 
     @inject_global
-    async def __invoke_llm(self, state: FreeTemplateState, llm: LLMABC) -> FreeTemplateState:
+    async def __invoke_llm(self, state: StrictTemplateState, llm: LLMABC) -> StrictTemplateState:
+        """
+        Итерация цикла вопроса-ответа.
+        LLM анализирует предыдущее сообщение и решает, какой вопрос задать пользователю.
+        Если LLM решает, что информации достаточно, то записывается loop_completed = True и цикл должен завершиться.
+        """
         self.__logger.debug("Asking...")
         is_ready, message = await llm_use_cases.loop_iteration_async(llm, state["messages"])
         if is_ready:
@@ -57,7 +70,12 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
 
         return {"messages": [*state["messages"], message]}
 
-    def __handle_answer(self, state: FreeTemplateState) -> FreeTemplateState:
+    def __handle_answer(self, state: StrictTemplateState) -> StrictTemplateState:
+        """
+        Прерывает выполнение графа через interrupt.
+        Граф должен быть возобновлен со следующим сообщением пользователя.
+        Сообщение будет добавлено в messages. Не производит никакого анализа ответа, только записывает.
+        """
         user_input = interrupt(None)
         user_message = ChatMessage.from_user(user_input)
         self.__logger.debug("Got user answer: %s", user_input)
@@ -65,7 +83,11 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
         return {"messages": [*state["messages"], user_message]}
 
     @inject_global
-    async def __prepare_field_values(self, state: FreeTemplateState, llm: LLMABC) -> FreeTemplateState:
+    async def __prepare_field_values(self, state: StrictTemplateState, llm: LLMABC) -> StrictTemplateState:
+        """
+        Генерирует через LLM значения полей для рендера шаблона.
+        Значения сохраняются в field_values.
+        """
         self.__logger.debug("Preparing field values...")
         values = await llm_use_cases.prepare_strict_template_values_async(llm, state["messages"],
                                                                           state["relevant_template"])
@@ -75,9 +97,14 @@ class StrictTemplateSubgraph(StateGraph[StrictTemplateState, None, BaseState, St
 
     @inject_global
     async def __generate_document(self,
-                                  state: FreeTemplateState,
+                                  state: StrictTemplateState,
                                   file_service: TemplateContentService,
-                                  result_storage: IssueResultFileStorageABC) -> FreeTemplateState:
+                                  result_storage: IssueResultFileStorageABC) -> StrictTemplateState:
+        """
+        Рендерит шаблон на основе значений из field_values.
+        Файл шаблона записывается в IssueResultFileStorageABC.
+        В messages добавляется сообщение об успехе, в состояние записывается флаг success.
+        """
         self.__logger.debug("Generating document...")
 
         with result_storage.write_issue_result_file(state["issue_id"]) as result_file:

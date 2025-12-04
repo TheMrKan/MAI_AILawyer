@@ -21,6 +21,9 @@ class IssueChatState:
 
 
 class IssueChatService(Registerable):
+    """
+    Сервис управления чатами обращений
+    """
 
     @classmethod
     async def on_build_provider(cls, provider: Provider):
@@ -44,6 +47,9 @@ class IssueChatService(Registerable):
         return compiled
 
     async def get_state(self, issue_id: int) -> IssueChatState:
+        """
+        Возвращает текущее состояние чата: полную историю сообщений, is_ended и success
+        """
         graph_config = {"configurable": {"thread_id": issue_id}}
         graph_state = await self.graph.aget_state(graph_config, subgraphs=True)
 
@@ -57,6 +63,11 @@ class IssueChatService(Registerable):
         )
 
     async def process_new_user_message(self, issue_id: int, message_text: str) -> IssueChatState:
+        """
+        Добавляет новое сообщение в чат обращения и возвращает ответ агента.
+        Если чат не существует, то создает его.
+        История сообщений возвращается начиная с переданного сообщения пользователя.
+        """
         graph_config = {"configurable": {"thread_id": issue_id}}
         graph_state = await self.graph.aget_state(graph_config, subgraphs=True)
 
@@ -87,14 +98,24 @@ class IssueChatService(Registerable):
         )
 
     async def is_ended(self, issue_id: int) -> bool:
+        """
+        Проверяет, завершен ли чат обращения.
+        """
         graph_config = {"configurable": {"thread_id": issue_id}}
         graph_state = await self.graph.aget_state(graph_config)
         return self.__is_ended(graph_state)
 
     @staticmethod
     def __get_chat_history(graph_state: StateSnapshot) -> list[ChatMessage]:
+        """
+        Возвращает полную историю сообщений чата.
+        """
+
+        # все эти заморочки внутри нужны, т. к. во время обработки подграфа история сообщений хранится
+        # только в состоянии подграфа и не видна в состоянии всего графа
         history = graph_state.values.get("messages", [])
         if any(graph_state.tasks):
+            # проверка на случай, если общее состояние новее состояния подграфа
             if len(graph_state.tasks[0].state.values.get("messages", [])) > len(history):
                 history = graph_state.tasks[0].state.values.get("messages", [])
 
@@ -102,15 +123,26 @@ class IssueChatService(Registerable):
 
     @staticmethod
     def __is_exists(graph_state: StateSnapshot) -> bool:
+        """
+        Если чат не существует, то aget_state возвращает состояние с пустыми полями.
+        Проверяет, что переданное состояние является состоянием не начатого графа.
+        """
         return graph_state.created_at is not None
 
     @staticmethod
     def __is_ended(graph_state: StateSnapshot) -> bool:
+        """
+        Проверяет, что переданное состояние является состоянием завершенного чата.
+        """
         return not any(graph_state.next)
 
     @staticmethod
     def __is_success(graph_state: StateSnapshot) -> bool:
+        """
+        Проверяет, что в состоянии графа есть отметка об успешной генерацией документа.
+        """
         success = graph_state.values.get("success", False)
+        # та же история с тем, что актуальное состояние может находиться только в подграфе
         if not success and any(graph_state.tasks):
             success = graph_state.tasks[0].state.values.get("success", False)
         return success

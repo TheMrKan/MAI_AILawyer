@@ -10,6 +10,10 @@ from src.application.provider import inject_global
 
 
 class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]):
+    """
+    Подграф поиска подходящих шаблонов и выбора релевантного.
+    Вызывается после подграфа анализа правовых актов.
+    """
 
     __logger: logging.Logger
 
@@ -29,6 +33,9 @@ class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]
 
     @inject_global
     async def __find_templates(self, state: BaseState, service: TemplateManager) -> BaseState:
+        """
+        Находит наиболее релевантные шаблоны в базе и сохраняет их в templates.
+        """
         self.__logger.info("Searching for templates...")
         templates = await service.find_templates_async(state["first_description"])
         self.__logger.info(f"Found templates: {templates}")
@@ -36,6 +43,10 @@ class TemplateAnalysisSubgraph(StateGraph[BaseState, None, BaseState, BaseState]
 
     @inject_global
     async def __analyze_templates(self, state: BaseState, service: TemplateContentService, llm: LLMABC) -> BaseState:
+        """
+        Передает в LLM тексты всех шаблонов для анализа.
+        Обрабатывает ответ LLM и сохраняет выбранный релевантный шаблон в relevant_template.
+        """
         self.__logger.info("Analyzing templates...")
         texts = [service.extract_text(tpl) for tpl in state["templates"]]
 

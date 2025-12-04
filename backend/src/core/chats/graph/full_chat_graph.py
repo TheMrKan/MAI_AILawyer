@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 class FullChatGraph(StateGraph[BaseState, None, InputState, BaseState]):
+    """
+    Общий граф, объединяющий все подграфы и определяющий переходы между ними.
+    """
 
     def __init__(self):
         super().__init__(BaseState, input_schema=InputState)    # type: ignore
@@ -37,6 +40,14 @@ class FullChatGraph(StateGraph[BaseState, None, InputState, BaseState]):
 
     @staticmethod
     def __path_selector(state: BaseState) -> str:
+        """
+        Выбор пути после анализа шаблона и подтверждения пользователя.
+        END - пользователь не подтвердил продолжение.
+        strict - генерация документа по строгому шаблону.
+        free - генерация документа в свободной форме.
+        :param state:
+        :return:
+        """
         if not state.get("template_confirmed", False):
             return "END"
 

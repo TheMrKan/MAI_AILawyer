@@ -13,6 +13,10 @@ from src.application.provider import inject_global
 
 
 class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTemplateState]):
+    """
+    Подграф генерации документа в свободной форме.
+    Вызывается в случае, если relevant_template = None.
+    """
 
     __logger: logging.Logger
 
@@ -45,6 +49,10 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
                            state: BaseState,
                            service: TemplateManager,
                            file_service: TemplateContentService) -> FreeTemplateState:
+        """
+        Добавляет в чат инструкции по дальнейшему циклу вопросов-ответов.
+        Инструкции включают текст шаблона.
+        """
         self.__logger.debug("Setting up QA loop...")
 
         free_template = await service.get_free_template_async()
@@ -54,6 +62,11 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
 
     @inject_global
     async def __invoke_llm(self, state: FreeTemplateState, llm: LLMABC) -> FreeTemplateState:
+        """
+        Итерация цикла вопроса-ответа.
+        LLM анализирует предыдущее сообщение и решает, какой вопрос задать пользователю.
+        Если LLM решает, что информации достаточно, то записывается loop_completed = True и цикл должен завершиться.
+        """
         self.__logger.debug("Asking...")
         is_ready, message = await llm_use_cases.loop_iteration_async(llm, state["messages"])
         if is_ready:
@@ -62,6 +75,11 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
         return {"messages": [*state["messages"], message]}
 
     def __handle_answer(self, state: FreeTemplateState) -> FreeTemplateState:
+        """
+        Прерывает выполнение графа через interrupt.
+        Граф должен быть возобновлен со следующим сообщением пользователя.
+        Сообщение будет добавлено в messages. Не производит никакого анализа ответа, только записывает.
+        """
         user_input = interrupt(None)
         user_message = ChatMessage.from_user(user_input)
         self.__logger.debug("Got user answer: %s", user_input)
@@ -70,6 +88,10 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
 
     @inject_global
     async def __prepare_field_values(self, state: FreeTemplateState, llm: LLMABC) -> FreeTemplateState:
+        """
+        Генерирует через LLM значения полей для рендера шаблона.
+        Значения сохраняются в field_values.
+        """
         self.__logger.debug("Preparing field values...")
         values = await llm_use_cases.prepare_free_template_values_async(llm, state["messages"], state["relevant_template"])
         self.__logger.debug("Prepared field values: %s", values)
@@ -81,6 +103,11 @@ class FreeTemplateSubgraph(StateGraph[FreeTemplateState, None, BaseState, FreeTe
                                   state: FreeTemplateState,
                                   file_service: TemplateContentService,
                                   result_storage: IssueResultFileStorageABC) -> FreeTemplateState:
+        """
+        Рендерит шаблон на основе значений из field_values.
+        Файл шаблона записывается в IssueResultFileStorageABC.
+        В messages добавляется сообщение об успехе, в состояние записывается флаг success.
+        """
         self.__logger.debug("Generating document...")
 
         with result_storage.write_issue_result_file(state["issue_id"]) as result_file:

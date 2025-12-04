@@ -6,8 +6,8 @@ services:
     environment:
       - "TEMPLATES_DIR=/app/templates"
       - "RESULTS_DIR=/app/results"
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     volumes:
       - "./backend/templates:/app/templates"
       - "./backend/results:/app/results"
@@ -15,15 +15,20 @@ services:
     depends_on:
       - chroma
       - postgres
+    networks:
+      - internal
+      - external
 
   postgres:
     image: postgres:15
     env_file:
       - ./backend/.env
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
 
   chroma:
     image: chromadb/chroma
@@ -31,11 +36,11 @@ services:
       - chroma_data:/data
     expose:
       - "8000"
-    ports:
-      - "8004:8000"
+    networks:
+      - internal
 
   frontend:
-    image: mrkan0/ai-lawyer-frontend
+    image: mrkan0/ai-lawyer-frontend:latest
     restart: always
     volumes:
       - frontend_build:/app/dist
@@ -49,8 +54,18 @@ services:
       - frontend_build:/usr/share/nginx/html:ro
     depends_on:
       - frontend
+    networks:
+      - internal
+      - external
 
 volumes:
   chroma_data:
   postgres_data:
   frontend_build:
+
+networks:
+  internal:
+    driver: bridge
+    internal: true
+  external:
+    driver: bridge

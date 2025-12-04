@@ -9,15 +9,16 @@ from dotenv import load_dotenv
 
 from src.api.issue import router as issue_router
 from src.api.laws import router as laws_router
-from src.api.routers import router as auth_router
+from src.api.auth import router as auth_router
 from src.api.profile import router as profile_router
 from src.application import provider
 
 load_dotenv()
 
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    from src.database.connection import create_tables
+    from src.storage.sql.connection import create_tables
     await create_tables()
 
     provider_instance = await provider.build_async()

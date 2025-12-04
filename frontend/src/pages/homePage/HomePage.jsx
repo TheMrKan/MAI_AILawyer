@@ -306,7 +306,7 @@ const HomePage = () => {
                 <div className="step-number">3</div>
                 <div className="step-content">
                   <h3>Получите документ</h3>
-                  <p>Готовый документ в форматах DOCX или PDF</p>
+                  <p>Готовый документ в формате DOCX</p>
                 </div>
               </div>
               <div className="step">

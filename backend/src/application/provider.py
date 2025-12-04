@@ -1,3 +1,8 @@
+"""
+Простой самописный Dependency Injection, чтобы не привязывать core к Depends от FastAPI.
+Не буду скрывать - ориентировался на DI из C#, т. к. он мне привычнее.
+"""
+
 from abc import ABC, abstractmethod
 from functools import wraps
 import inspect
@@ -11,24 +16,49 @@ import logging
 
 _logger = logging.getLogger(__name__)
 global_provider: "Provider"
+"""
+Глобальный провайдер, использующийся в inject_global
+для функций в которые нельзя пробросить провайдер из эндпоинтов.
+"""
 
 
 class ServiceResolverABC(ABC):
+    """
+    Интерфейс источника сервисов.
+    """
 
     @abstractmethod
     def resolve[IFACE](self, interface: type[IFACE], resolver: Self | None = None) -> IFACE:
+        """
+        :param interface: Класс-интерфейс, для которого нужно вернуть реализацию.
+        :param resolver: Источник сервисов, который будет использован для создания объекта в фабрике.
+            Нужен для передачи родительских Scope.
+        :return: Объект, реализующий заданный интерфейс.
+        """
         pass
 
     @abstractmethod
     def __contains__(self, item: type) -> bool:
+        """
+        Проверяет, что источник может вернуть реализацию для данного интерфейса.
+        """
         pass
 
     @abstractmethod
     def __getitem__[IFACE](self, item: type[IFACE]) -> IFACE:
+        """
+        Шорткат для resolve
+        """
         pass
 
 
 def _get_injectables(func: Callable, source: ServiceResolverABC) -> dict[str, Any]:
+    """
+    Получает аргументы функции, которые могут быть взяты из источника сервисов.
+    :param func: Функция, под сигнатуру которой будут получаться объекты.
+    :param source: Источник сервисов
+    :return: Словарь {"arg_name": obj}, где obj реализует интерфейс, указанный в аннотации arg_name
+    """
     values = {}
     sig = inspect.signature(func)
     for pname, pvalue in sig.parameters.items():
@@ -40,6 +70,10 @@ def _get_injectables(func: Callable, source: ServiceResolverABC) -> dict[str, An
 
 
 def inject_global(func: Callable):
+    """
+    Декоратор для автоматического инжекта всех возможных аргументов функции из global_provider при каждом вызове.
+    Используется в нодах графа, т. к. туда сложно передать провайдер из эндпоинтов.
+    """
     @wraps(func)
     async def wrapper(*args, **kwargs):
         injectables = _get_injectables(func, global_provider)
@@ -50,6 +84,11 @@ def inject_global(func: Callable):
 
 
 class FactoryABC[T](ABC):
+    """
+    Интерфейс фабрики. Провайдер хранит не конкретные классы реализации или объекты, а фабрики.
+    Через фабрику реализуется lifetime Transient и Singleton.
+    Не совсем корректно, но DI развивался постепенно и полностью переписывать на середине было нецелесообразно.
+    """
 
     @abstractmethod
     def __call__(self, resolver: ServiceResolverABC) -> T:
@@ -57,6 +96,10 @@ class FactoryABC[T](ABC):
 
 
 class Singleton[T](FactoryABC[T]):
+    """
+    Фабрика, реализующая singleton lifetime.
+    Объект реализации создается в момент сборки контейнера и используется везде.
+    """
     __instance: T | None = None
 
     def __init__(self, instance: T):
@@ -67,6 +110,11 @@ class Singleton[T](FactoryABC[T]):
 
 
 class Transient[T](FactoryABC[T]):
+    """
+    Фабрика, реализующая transient lifetime.
+    Создает новый объект реализации при каждом вызове через конструктор указанного класса.
+    Инжектит зависимости в конструктор через resolver (тот самый параметр resolver в ServiceResolverABC.resolve)
+    """
     __cls: type[T]
 
     def __init__(self, cls: type[T]):
@@ -78,12 +126,22 @@ class Transient[T](FactoryABC[T]):
 
 
 class Provider(ServiceResolverABC):
+    """
+    Основная коллекция сервисов. Почти аналог IServiceProvider из C#.
+    """
     mapping: dict[type, FactoryABC]
+    """
+    Класс интерфейса: фабрика
+    """
 
     def __init__(self):
+        # добавляет себя, чтобы можно было получать provider внутри сервисов
         self.mapping = {Provider: Singleton(self)}
 
     def __getitem__[IFACE](self, item: type[IFACE]) -> IFACE:
+        """
+        Шорткат для resolve
+        """
         return self.resolve(item)
 
     def __contains__(self, item: type) -> bool:

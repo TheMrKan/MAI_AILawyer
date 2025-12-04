@@ -19,52 +19,37 @@ const AccountPage = () => {
   const [documents, setDocuments] = useState([]);
 
   // Загружаем данные пользователя
- useEffect(() => {
-  const loadUserData = async () => {
-    try {
-      const user = localStorage.getItem('user');
-      if (user) {
-        const parsedUser = JSON.parse(user);
-        console.log('Loaded user from localStorage:', parsedUser); // Добавим для отладки
+useEffect(() => {
+      const loadUserData = async () => {
+        try {
+          const user = await userAPI.getMe();
 
-        // Проверяем, есть ли данные из Google
-        if (parsedUser.id) {
-          setUserData(parsedUser);
+          // нормализация данных
+          const normalized = {
+            id: user.id,
+            email: user.email,
+            name: `${user.first_name || ''} ${user.last_name || ''}`.trim()
+              || user.email.split('@')[0],
+            avatar: user.avatar_url,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            joinDate: user.created_at,
+            phone: user.phone ?? '',
+          };
 
-          // Если имя пустое или дефолтное, пробуем взять из email
-          if (!parsedUser.name || parsedUser.name === 'Пользователь' || parsedUser.name === parsedUser.email) {
-            const nameFromEmail = parsedUser.email?.split('@')[0] || 'Пользователь';
-            const updatedUser = {
-              ...parsedUser,
-              name: nameFromEmail
-            };
-            setUserData(updatedUser);
-            localStorage.setItem('user', JSON.stringify(updatedUser));
-          }
-        } else {
-          // Если данных нет, перенаправляем на авторизацию
+          setUserData(normalized);
+          localStorage.setItem('user', JSON.stringify(normalized));
+
+        } catch (error) {
+          console.error("Error loading user profile:", error);
           navigate('/signin');
+        } finally {
+          setIsLoading(false);
         }
-      } else {
-        // Если пользователя нет в localStorage, перенаправляем на авторизацию
-        navigate('/signin');
-      }
+      };
 
-      // Здесь можно добавить загрузку документов с API
-      // const docs = await userAPI.getDocuments();
-      // setDocuments(docs);
-
-    } catch (error) {
-      console.error('Error loading user data:', error);
-      // В случае ошибки перенаправляем на авторизацию
-      navigate('/signin');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  loadUserData();
-}, [navigate]);
+      loadUserData();
+    }, [navigate]);
 
   const handleSaveProfile = async (updatedData) => {
     try {
@@ -148,7 +133,6 @@ const AccountPage = () => {
               )}
             </div>
             <div className="profile-info">
-              {/* ДОБАВЬТЕ ЭТОТ ЗАГОЛОВОК h1 */}
               <h1>{userData?.name || 'Пользователь'}</h1>
               <p>{userData?.email || 'email@example.com'}</p>
               <div className="profile-contacts">
@@ -156,13 +140,6 @@ const AccountPage = () => {
               </div>
             </div>
           </div>
-          <Button
-            variant="secondary"
-            onClick={handleEditProfile}
-            className="edit-profile-btn"
-          >
-            ✏️ Редактировать профиль
-          </Button>
         </div>
 
         {/* Контент табов */}
@@ -234,7 +211,7 @@ const AccountPage = () => {
             </div>
           )}
 
-          
+
 
           {activeTab === 'settings' && (
             <div className="settings-section">

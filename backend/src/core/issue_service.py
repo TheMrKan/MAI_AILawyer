@@ -1,9 +1,22 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from src.database.models import Issue
 from typing import Optional
 
-class IssueService:
+from src.core.users.types import UserInfo
+from src.storage.sql.models import Issue
+from src.application.provider import Registerable, Provider, Transient
+
+
+class IssueService(Registerable):
+    """
+    Смесь репозитория и сервиса, но вроде не критично. Не хочется раздувать код ради одной функции.
+    Да, надо исправить, когда будет время.
+    """
+
+    @classmethod
+    async def on_build_provider(cls, provider: Provider):
+        provider.register(IssueService, Transient(cls))
+
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -16,11 +29,6 @@ class IssueService:
         await self.db.flush()
         return new_issue
 
-    async def commit_issue(self, issue: Issue) -> Issue:
-        await self.db.commit()
-        await self.db.refresh(issue)
-        return issue
-
     async def get_issue_by_id(self, issue_id: int) -> Optional[Issue]:
         result = await self.db.execute(
             select(Issue).where(
@@ -29,5 +37,9 @@ class IssueService:
         )
         return result.scalar_one_or_none()
 
-    async def rollback_issue(self) -> None:
-        await self.db.rollback()
+    @staticmethod
+    def can_download_result(issue: Issue, user: UserInfo | None) -> bool:
+        if not user:
+            return False
+
+        return issue.user_id == user.id

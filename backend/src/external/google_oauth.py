@@ -1,17 +1,49 @@
 import httpx
+import secrets
+import time
 
-from src.api.schemas import UserCreate
+from src.core.users.iface import OAuthProviderABC
+from src.core.users.types import UserSSOInfo
 from src.config import settings
+from src.application.provider import Registerable, Provider, Singleton
 
-class GoogleOAuth:
+
+class GoogleOAuth(OAuthProviderABC, Registerable):
+
+    @classmethod
+    async def on_build_provider(cls, provider: Provider):
+        google_oauth = cls()
+        provider.register(OAuthProviderABC, Singleton(google_oauth))
+        provider.register(GoogleOAuth, Singleton(google_oauth))
+
+    AUTH_STATE_TTL = 600
+
     def __init__(self):
         self.client_id = settings.GOOGLE_CLIENT_ID
         self.client_secret = settings.GOOGLE_CLIENT_SECRET
         self.redirect_uri = f"{settings.BACKEND_URL}/auth/google/callback"
         self.token_url = "https://oauth2.googleapis.com/token"
         self.user_info_url = "https://www.googleapis.com/oauth2/v3/userinfo"
+        self.states = {}
 
-    def get_authorization_url(self, state: str):
+    def generate_state(self) -> str:
+        state = secrets.token_urlsafe(32)
+        self.states[state] = time.time()
+        return state
+
+    def validate_state(self, state: str) -> bool:
+        if state not in self.states:
+            return False
+
+        created_time = self.states[state]
+        if time.time() - created_time >= self.AUTH_STATE_TTL:
+            del self.states[state]
+            return False
+
+        del self.states[state]
+        return True
+
+    def get_authorization_url(self, state: str) -> str:
         base_url = "https://accounts.google.com/o/oauth2/v2/auth"
         params = {
             "client_id": self.client_id,
@@ -24,7 +56,7 @@ class GoogleOAuth:
         query_string = "&".join([f"{k}={v}" for k, v in params.items()])
         return f"{base_url}?{query_string}"
 
-    async def get_user_info(self, code: str) -> UserCreate:
+    async def get_user_info(self, code: str) -> UserSSOInfo:
         async with httpx.AsyncClient() as client:
             token_response = await client.post(
                 self.token_url,
@@ -53,7 +85,7 @@ class GoogleOAuth:
 
             user_info = user_info_response.json()
 
-        return UserCreate(
+        return UserSSOInfo(
             email=user_info["email"],
             sso_provider="google",
             sso_id=user_info["sub"],
@@ -61,5 +93,3 @@ class GoogleOAuth:
             last_name=user_info.get("family_name", ""),
             avatar_url=user_info.get("picture")
         )
-
-google_oauth = GoogleOAuth()

@@ -3,5 +3,5 @@ __pycache__/
 *.py[codz]
 *$py.class
 /.venv/
-results/
-templates/
+/results/
+/templates/

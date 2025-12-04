@@ -1,25 +1,31 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from src.database.connection import get_db
-from src.api.deps import get_current_user
-from src.database.models import User
-from src.api.schemas import ProfileResponse
+from fastapi import APIRouter, Depends, HTTPException
 import logging
+from pydantic import BaseModel, ConfigDict
+from pydantic.types import UUID4
+
+from src.api.deps import get_current_user
+from src.core.users.types import UserInfo
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 
+class ProfileResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID4
+    email: str
+    first_name: str
+    last_name: str
+    avatar_url: str
+
+
 @router.get("/me", response_model=ProfileResponse)
 async def get_my_profile(
-        current_user: User = Depends(get_current_user)
+        current_user: UserInfo = Depends(get_current_user)
 ):
-    return ProfileResponse(
-        id=current_user.id,
-        email=current_user.email,
-        first_name=current_user.first_name,
-        last_name=current_user.last_name,
-        avatar_url=current_user.avatar_url,
-        created_at=current_user.created_at
-    )
+    if current_user:
+        return ProfileResponse.model_validate(current_user)
+
+    raise HTTPException(status_code=403)

@@ -3,12 +3,56 @@ from functools import wraps
 import inspect
 import os
 from pathlib import Path
+from typing import Any, Self, Callable, overload
+import pkgutil
+import importlib
+import logging
+
+
+_logger = logging.getLogger(__name__)
+global_provider: "Provider"
+
+
+class ServiceResolverABC(ABC):
+
+    @abstractmethod
+    def resolve[IFACE](self, interface: type[IFACE], resolver: Self | None = None) -> IFACE:
+        pass
+
+    @abstractmethod
+    def __contains__(self, item: type) -> bool:
+        pass
+
+    @abstractmethod
+    def __getitem__[IFACE](self, item: type[IFACE]) -> IFACE:
+        pass
+
+
+def _get_injectables(func: Callable, source: ServiceResolverABC) -> dict[str, Any]:
+    values = {}
+    sig = inspect.signature(func)
+    for pname, pvalue in sig.parameters.items():
+        if pvalue.annotation not in source:
+            continue
+
+        values[pname] = source.resolve(pvalue.annotation)
+    return values
+
+
+def inject_global(func: Callable):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        injectables = _get_injectables(func, global_provider)
+        kwargs.update(injectables)
+        return await func(*args, **kwargs)
+
+    return wrapper
 
 
 class FactoryABC[T](ABC):
 
     @abstractmethod
-    def __call__(self) -> T:
+    def __call__(self, resolver: ServiceResolverABC) -> T:
         pass
 
 
@@ -18,14 +62,22 @@ class Singleton[T](FactoryABC[T]):
     def __init__(self, instance: T):
         self.__instance = instance
 
-    def __call__(self, *args, **kwargs) -> T:
+    def __call__(self, resolver: ServiceResolverABC) -> T:
         return self.__instance
 
 
-global_provider: "Provider"
+class Transient[T](FactoryABC[T]):
+    __cls: type[T]
+
+    def __init__(self, cls: type[T]):
+        self.__cls = cls
+
+    def __call__(self, resolver: ServiceResolverABC) -> T:
+        injectables = _get_injectables(self.__cls, resolver)
+        return self.__cls(**injectables)
 
 
-class Provider:
+class Provider(ServiceResolverABC):
     mapping: dict[type, FactoryABC]
 
     def __init__(self):
@@ -37,73 +89,87 @@ class Provider:
     def __contains__(self, item: type) -> bool:
         return item in self.mapping.keys()
 
-    def resolve(self, interface: type):
-        return self.mapping[interface]()
+    def resolve[IFACE](self, interface: type[IFACE], resolver: ServiceResolverABC | None = None) -> IFACE:
+        return self.mapping[interface](resolver)
 
-    def register_singleton[IFACE](self, interface: type[IFACE], instance: IFACE):
-        self.mapping[interface] = Singleton(instance)
+    def register[IFACE](self, iface: type[IFACE], factory: FactoryABC[IFACE]):
+        self.mapping[iface] = factory
 
 
-def inject_global(func):
-    @wraps(func)
-    async def wrapper(*args, **kwargs):
-        sig = inspect.signature(func)
-        for pname, pvalue in sig.parameters.items():
-            if pvalue.annotation not in global_provider:
+class Scope(ServiceResolverABC):
+
+    __scope_instances: dict[type, Any]
+    parent: ServiceResolverABC | None
+
+    def __init__(self, parent: ServiceResolverABC | None = None, *instances: Any):
+        self.parent = parent
+        self.__scope_instances = {type(i): i for i in instances}
+
+    def resolve[IFACE](self, interface: type[IFACE], resolver: ServiceResolverABC | None = None) -> IFACE:
+        value = self.__scope_instances.get(interface, None)
+        if value:
+            return value
+
+        if self.parent:
+            return self.parent.resolve(interface, resolver or self)
+        raise KeyError
+
+    def __contains__(self, item: type) -> bool:
+        return item in self.__scope_instances.keys() or (self.parent and item in self.parent)
+
+    def __getitem__[IFACE](self, item: type[IFACE]) -> IFACE:
+        return self.resolve(item)
+
+    def set_scoped_value[IFACE](self, value: IFACE, iface: type[IFACE] | None = None):
+        self.__scope_instances[iface or type(value)] = value
+
+
+class Registerable(ABC):
+
+    __REG_ORDER__ = 0
+
+    @classmethod
+    @abstractmethod
+    async def on_build_provider(cls, provider: Provider):
+        pass
+
+
+def __find_registerables() -> list[tuple[int, type[Registerable]]]:
+    result = []
+    unique = set()
+
+    import src
+    package_path = Path(src.__file__).parent
+
+    for module_info in pkgutil.walk_packages([str(package_path)], "src."):
+        module = importlib.import_module(module_info.name)
+
+        for _, obj in inspect.getmembers(module, inspect.isclass):
+            if obj in unique:
                 continue
 
-            kwargs[pname] = global_provider[pvalue.annotation]
-        return await func(*args, **kwargs)
+            if issubclass(obj, Registerable) and obj is not Registerable:
+                if hasattr(obj, "__REG_ORDER__"):
+                    priority = getattr(obj, "__REG_ORDER__")
+                else:
+                    priority = 0
+                unique.add(obj)
+                result.append((priority, obj))
 
-    return wrapper
+    result.sort(key=lambda i: i[0])
+    return result
 
 
 async def build_async() -> Provider:
     provider = Provider()
 
-    from src.core.llm import LLMABC
-    from src.external.cerebras_llm import CerebrasLLM
-    provider.register_singleton(LLMABC, CerebrasLLM())
+    registerables = __find_registerables()
+    _logger.info("Found %s registerable classes...", len(registerables))
 
-    from src.core.issue_chat_service import IssueChatService
-    from langgraph.checkpoint.memory import InMemorySaver
-    checkpointer = InMemorySaver()
-    provider.register_singleton(IssueChatService, IssueChatService(checkpointer))
-
-    import chromadb
-    chroma_client = await chromadb.AsyncHttpClient(host="chroma", port=8000)
-
-    from src.core.laws import LawDocsRepositoryABC
-    from src.external.chroma_law_docs_repo import ChromaLawDocsRepository
-    laws_repo = ChromaLawDocsRepository(chroma_client)
-    await laws_repo.init_async()
-    provider.register_singleton(LawDocsRepositoryABC, laws_repo)
-
-    from src.core.templates.iface import TemplatesRepositoryABC
-    from src.external.chroma_templates_repo import ChromaTemplatesRepository
-    templates_repo = ChromaTemplatesRepository(chroma_client)
-    await templates_repo.init_async()
-    provider.register_singleton(TemplatesRepositoryABC, templates_repo)
-
-    from src.core.templates.service import TemplateService
-    provider.register_singleton(TemplateService, TemplateService(templates_repo))
-
-    from src.core.templates.iface import TemplatesFileStorageABC
-    from src.external.fs_templates_storage import FilesystemTemplatesStorage
-    templates_dir = Path(os.getenv("TEMPLATES_DIR") or "")
-    if not templates_dir.exists():
-        raise Exception("TEMPLATES_DIR env var must be set")
-    templates_storage = FilesystemTemplatesStorage(templates_dir)
-    provider.register_singleton(TemplatesFileStorageABC, templates_storage)
-
-    from src.core.templates.file_service import TemplateFileService
-    provider.register_singleton(TemplateFileService, TemplateFileService(templates_storage))
-
-    from src.core.results.iface import IssueResultFileStorageABC
-    from src.external.fs_issue_result_storage import FilesystemIssueResultStorageABC
-    results_dir = Path(os.getenv("RESULTS_DIR") or "")
-    if not results_dir.exists():
-        raise Exception("RESULTS_DIR env var must be set")
-    provider.register_singleton(IssueResultFileStorageABC, FilesystemIssueResultStorageABC(results_dir))
+    for priority, cls in registerables:
+        try:
+            await cls.on_build_provider(provider)
+        except Exception as e:
+            _logger.error("Failed to register class %s in provider", cls, exc_info=e)
 
     return provider

@@ -2,9 +2,9 @@ from fastapi import APIRouter, HTTPException, Depends, Response
 from pydantic import BaseModel
 import logging
 
-from src.core.laws import LawDocsRepositoryABC
+from src.core.laws.iface import LawDocsRepositoryABC
 from src.application.provider import Provider
-from src.dto.laws import LawFragment as DtoLawFragment
+from src.core.laws.types import LawFragment as DtoLawFragment
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,6 @@ class AddOrUpdateLawFragmentSchema(BaseModel):
 
     def to_dto(self) -> DtoLawFragment:
         return DtoLawFragment(fragment_id=self.fragment_id, document_id=self.document_id, content=self.content)
-
 
 
 @router.get("/", response_model=list[LawFragmentSchema])

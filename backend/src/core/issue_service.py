@@ -8,6 +8,10 @@ from src.application.provider import Registerable, Provider, Transient
 
 
 class IssueService(Registerable):
+    """
+    Смесь репозитория и сервиса, но вроде не критично. Не хочется раздувать код ради одной функции.
+    Да, надо исправить, когда будет время.
+    """
 
     @classmethod
     async def on_build_provider(cls, provider: Provider):

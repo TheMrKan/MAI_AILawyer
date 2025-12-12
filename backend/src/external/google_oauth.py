@@ -57,7 +57,7 @@ class GoogleOAuth(OAuthProviderABC, Registerable):
         return f"{base_url}?{query_string}"
 
     async def get_user_info(self, code: str) -> UserSSOInfo:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             token_response = await client.post(
                 self.token_url,
                 data={
@@ -66,30 +66,37 @@ class GoogleOAuth(OAuthProviderABC, Registerable):
                     "code": code,
                     "grant_type": "authorization_code",
                     "redirect_uri": self.redirect_uri,
+                },
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded"
                 }
             )
 
-            if token_response.status_code != 200:
-                raise ValueError("Failed to get access token")
-
             tokens = token_response.json()
             access_token = tokens.get("access_token")
+
+            if not access_token:
+                raise ValueError(f"Google token error: {tokens}")
 
             user_info_response = await client.get(
                 self.user_info_url,
                 headers={"Authorization": f"Bearer {access_token}"}
             )
 
-            if user_info_response.status_code != 200:
-                raise ValueError("Failed to get user info")
-
             user_info = user_info_response.json()
 
-        return UserSSOInfo(
-            email=user_info["email"],
-            sso_provider="google",
-            sso_id=user_info["sub"],
-            first_name=user_info.get("given_name", ""),
-            last_name=user_info.get("family_name", ""),
-            avatar_url=user_info.get("picture")
-        )
+            if not isinstance(user_info, dict):
+                raise ValueError(f"Invalid userinfo response: {user_info}")
+
+            if "email" not in user_info or "sub" not in user_info:
+                raise ValueError(f"Incomplete userinfo: {user_info}")
+
+            return UserSSOInfo(
+                email=user_info["email"],
+                sso_provider="google",
+                sso_id=user_info["sub"],
+                first_name=user_info.get("given_name", ""),
+                last_name=user_info.get("family_name", ""),
+                avatar_url=user_info.get("picture"),
+            )
+

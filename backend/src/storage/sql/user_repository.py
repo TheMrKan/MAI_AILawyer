@@ -25,11 +25,19 @@ class UserRepository(UserRepositoryABC, Registerable):
 
         result = await self.db.execute(select(User).where(User.id == user_uuid))
         db_user = result.scalar_one_or_none()
+
+        if db_user is None:
+            return None
+
         return UserInfo.model_validate(db_user)
 
     async def get_by_email(self, email: str) -> UserInfo | None:
         result = await self.db.execute(select(User).where(User.email == email))
         db_user = result.scalar_one_or_none()
+
+        if db_user is None:
+            return None
+
         return UserInfo.model_validate(db_user)
 
     async def get_by_sso(self, sso_provider: str, sso_id: str) -> UserInfo | None:
@@ -42,6 +50,10 @@ class UserRepository(UserRepositoryABC, Registerable):
             )
         )
         db_user = result.scalar_one_or_none()
+
+        if db_user is None:
+            return None
+
         return UserInfo.model_validate(db_user)
 
     async def create(self, user_data: UserSSOInfo) -> UserInfo:

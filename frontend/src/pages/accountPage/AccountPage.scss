@@ -2,11 +2,9 @@
 @import '../../styles/mixins';
 
 .account-page {
-  min-height: 100vh;
-  background: $light-bg;
-  display: flex;
-  flex-direction: column;
+  background: #f6f7fb;
 }
+
 
 .loading-container {
   flex: 1;
@@ -25,25 +23,43 @@
     padding: 1rem;
   }
 }
-
-// Хедер профиля
 .profile-header {
-  background: linear-gradient(135deg, $primary-color 0%, $secondary-color 100%);
-  color: $white;
-  padding: 3rem 2rem;
-  border-radius: 20px;
-  margin-bottom: 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: $shadow-lg;
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    #6f7cf7 0%,
+    #7b5fc4 50%,
+    #8b5cf6 100%
+  );
+  color: #fff;
+}
 
-  @include mobile {
-    flex-direction: column;
-    gap: 1.5rem;
-    text-align: center;
-    padding: 2rem 1rem;
-  }
+/* мягкое стеклянное сияние сверху */
+.profile-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.18),
+    transparent 45%
+  );
+  pointer-events: none;
+}
+
+/* лёгкий шум / depth */
+.profile-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at top left,
+    rgba(255, 255, 255, 0.15),
+    transparent 60%
+  );
+  pointer-events: none;
 }
 
 .profile-avatar {
@@ -258,17 +274,21 @@
 }
 
 .document-card {
-  background: $light-bg;
-  padding: 1.5rem;
-  border-radius: 12px;
-  border: 1px solid $light-gray;
-  transition: all 0.3s ease;
+  position: relative;
+  background: #fff;
+  border-radius: 16px;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+  will-change: transform;
+}
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: $shadow;
-    border-color: $primary-color;
-  }
+/* hover */
+.document-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(123, 92, 246, 0.08);
 }
 
 .document-header {
@@ -288,30 +308,30 @@
 }
 
 .status-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-
-  &.status-completed {
-    background: rgba($success-color, 0.1);
-    color: $success-color;
-  }
-
-  &.status-draft {
-    background: rgba($warning-color, 0.1);
-    color: $warning-color;
-  }
-
-  &.status-processing {
-    background: rgba($primary-color, 0.1);
-    color: $primary-color;
-  }
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
+
+.status-completed {
+  background: rgba(34,197,94,.12);
+  color: #16a34a;
+}
+
+.status-draft {
+  background: rgba(59,130,246,.12);
+  color: #2563eb;
+}
+
+.status-processing {
+  background: rgba(234,179,8,.15);
+  color: #ca8a04;
+}
+
 
 .document-info {
   margin-bottom: 1.5rem;
@@ -498,3 +518,207 @@
   color: #666;
   cursor: not-allowed;
 }
+
+.error-text {
+  color: #d9534f;
+  font-weight: 600;
+  padding: 6px 0;
+  display: inline-block;
+}
+
+.document-card.modern {
+  padding: 20px;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.06);
+  transition: 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid #f2f2f2;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+  }
+}
+
+.doc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.doc-title {
+  color: #1f2937;
+  font-weight: 500;
+
+  &::selection {
+    background: rgba(123, 92, 246, 0.25);
+    color: #1f2937;
+  }
+}
+
+.doc-description {
+  color: #444;
+  font-size: 14px;
+  line-height: 1.4;
+  max-height: 3.6em;      // 2 строки
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.doc-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.doc-date {
+  font-size: 13px;
+  color: #777;
+}
+
+.doc-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.doc-error {
+  color: #d9534f;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.chatgpt-preview {
+  font-size: 14px;
+  line-height: 1.45;
+  color: #9aa1b2;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+
+.document-card.skeleton {
+  padding: 20px;
+  border-radius: 16px;
+  background: #f4f4f4;
+  border: 1px solid #e1e1e1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+.skeleton-title,
+.skeleton-line,
+.skeleton-footer {
+  border-radius: 8px;
+  background: #e2e2e2;
+}
+
+.skeleton-title {
+  width: 60%;
+  height: 20px;
+}
+
+.skeleton-line.short {
+  width: 40%;
+  height: 14px;
+}
+
+.skeleton-line.long {
+  width: 80%;
+  height: 14px;
+}
+
+.skeleton-footer {
+  width: 30%;
+  height: 16px;
+}
+
+@keyframes pulse {
+  0%   { opacity: .5; }
+  50%  { opacity: 1; }
+  100% { opacity: .5; }
+}
+
+@media (max-width: 768px) {
+  .documents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+ }
+
+  .document-card.modern {
+      background: #171a21;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 16px;
+
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      transition: all 0.25s ease;
+      backdrop-filter: blur(10px);
+
+      &:hover {
+        transform: translateY(-4px);
+        background: #1e2230;
+        border-color: rgba(255, 255, 255, 0.15);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+      }
+ }
+
+  .doc-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .doc-title {
+    font-size: 16px;
+  }
+
+  .doc-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .doc-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+  }
+}
+
+.doc-status {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.status-completed {
+  background: rgba(16, 163, 127, 0.15);
+  color: #10a37f;
+}
+
+.status-draft {
+  background: rgba(77, 163, 255, 0.15);
+  color: #4da3ff;
+}
+
+.status-error {
+  background: rgba(255, 77, 79, 0.15);
+  color: #ff4d4f;
+}
+

@@ -212,10 +212,24 @@ useEffect(() => {
                         <div className="skeleton-footer" />
                       </div>
                     ))
+                  ) : documents.length === 0 ? (
+                    <div className="empty-state">
+                      <div className="empty-icon">📄</div>
+                      <h3>Документов пока нет</h3>
+                      <p>
+                        Создай первый документ — мы поможем оформить его правильно
+                      </p>
+
+                      <Button
+                        size="large"
+                        onClick={() => navigate('/')}
+                      >
+                        ➕ Создать документ
+                      </Button>
+                    </div>
                   ) : (
                     documents.map(doc => (
                       <div key={doc.id} className="document-card modern">
-
                         <div className="doc-top">
                           <h3 className="doc-title">{doc.title}</h3>
                           {getStatusBadge(doc.status)}
@@ -229,17 +243,20 @@ useEffect(() => {
                           <div className="doc-actions">
                             {doc.status === "completed" && (
                               <Button
-                                  size="small"
-                                  onClick={() => handleDownload(doc.id)}
-                                  disabled={downloadingId === doc.id}
-                                >
-                                  {downloadingId === doc.id ? '⏳ Загрузка...' : '📥 Скачать'}
+                                size="small"
+                                onClick={() => handleDownload(doc.id)}
+                                disabled={downloadingId === doc.id}
+                              >
+                                {downloadingId === doc.id ? '⏳ Загрузка...' : '📥 Скачать'}
                               </Button>
-
                             )}
 
                             {doc.status === "draft" && (
-                              <Button size="small" variant="secondary" onClick={() => handleContinue(doc.id)}>
+                              <Button
+                                size="small"
+                                variant="secondary"
+                                onClick={() => handleContinue(doc.id)}
+                              >
                                 ➕ Продолжить
                               </Button>
                             )}
@@ -249,7 +266,6 @@ useEffect(() => {
                             )}
                           </div>
                         </div>
-
                       </div>
                     ))
                   )}

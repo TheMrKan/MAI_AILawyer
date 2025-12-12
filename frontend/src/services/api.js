@@ -120,6 +120,16 @@ export const userAPI = {
     window.location.href = `${API_BASE_URL}/auth/google`;
   },
 
+  async getUserDocuments() {
+    try {
+      const response = await api.get('/issue/user/documents/');
+      return response.data;
+    } catch (error) {
+      console.error('Error loading documents:', error);
+      throw error;
+    }
+  },
+
   async getMe() {
     const response = await api.get('/profile/me');
     return response.data;

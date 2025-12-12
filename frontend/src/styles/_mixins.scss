@@ -67,3 +67,23 @@
     color: darken($primary-color, 10%);
   }
 }
+
+@mixin chatgpt-bg {
+  background:
+    radial-gradient(
+      1200px circle at 10% -20%,
+      rgba(109, 94, 252, 0.15),
+      transparent 40%
+    ),
+    radial-gradient(
+      800px circle at 90% 10%,
+      rgba(16, 163, 127, 0.18),
+      transparent 45%
+    ),
+    linear-gradient(
+      180deg,
+      #0f1117 0%,
+      #0b0d12 100%
+    );
+}
+

@@ -37,6 +37,14 @@ class IssueService(Registerable):
         )
         return result.scalar_one_or_none()
 
+    async def get_user_issues(self, user_id):
+        result = await self.db.execute(
+            select(Issue)
+            .where(Issue.user_id == user_id)
+            .order_by(Issue.created_at.desc())
+        )
+        return result.scalars().all()
+
     @staticmethod
     def can_download_result(issue: Issue, user: UserInfo | None) -> bool:
         if not user:

@@ -122,7 +122,7 @@ export const userAPI = {
 
   async getUserDocuments() {
     try {
-      const response = await api.get('/issue/user/documents/');
+      const response = await api.get('/profile/documents/');
       return response.data;
     } catch (error) {
       console.error('Error loading documents:', error);

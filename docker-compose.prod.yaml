@@ -1,0 +1,71 @@
+services:
+  backend:
+    image: mrkan0/ai-lawyer-backend:latest
+    env_file:
+      - ./backend/.env
+    environment:
+      - "TEMPLATES_DIR=/app/templates"
+      - "RESULTS_DIR=/app/results"
+    expose:
+      - "8000"
+    volumes:
+      - "./backend/templates:/app/templates"
+      - "./backend/results:/app/results"
+    restart: unless-stopped
+    depends_on:
+      - chroma
+      - postgres
+    networks:
+      - internal
+      - external
+
+  postgres:
+    image: postgres:15
+    env_file:
+      - ./backend/.env
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  chroma:
+    image: chromadb/chroma
+    volumes:
+      - chroma_data:/data
+    expose:
+      - "8000"
+    networks:
+      - internal
+
+  frontend:
+    image: mrkan0/ai-lawyer-frontend:latest
+    restart: always
+    volumes:
+      - frontend_build:/app/dist
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - frontend_build:/usr/share/nginx/html:ro
+    depends_on:
+      - frontend
+    networks:
+      - internal
+      - external
+
+volumes:
+  chroma_data:
+  postgres_data:
+  frontend_build:
+
+networks:
+  internal:
+    driver: bridge
+    internal: true
+  external:
+    driver: bridge

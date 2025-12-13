@@ -102,11 +102,6 @@ async def get_user_documents(
                     "status": status,
                     "date": issue.created_at.strftime("%Y-%m-%d"),
                     "created_at": issue.created_at.isoformat(),
-                    "text_preview": (
-                        issue.text[:100] + "..."
-                        if len(issue.text) > 100
-                        else issue.text
-                    ),
                 }
             )
 

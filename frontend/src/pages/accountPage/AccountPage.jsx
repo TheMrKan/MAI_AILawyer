@@ -121,20 +121,33 @@ useEffect(() => {
   };
 
   const getStatusBadge = (status) => {
-    const statusConfig = {
-      completed: { text: 'Завершено', class: 'status-completed', icon: '✅' },
-      draft: { text: 'Черновик', class: 'status-draft', icon: '📝' },
-      processing: { text: 'В обработке', class: 'status-processing', icon: '⏳' }
-    };
+      const statusConfig = {
+        completed: {
+          text: 'Готово',
+          class: 'status-completed',
+          icon: '🎉',
+        },
+        draft: {
+          text: 'В работе',
+          class: 'status-draft',
+          icon: '✍️',
+        },
+        error: {
+          text: 'Ошибка генерации',
+          class: 'status-error',
+          icon: '⚠️',
+        },
+      };
 
-    const config = statusConfig[status] || statusConfig.draft;
-    return (
-      <span className={`status-badge ${config.class}`}>
-        <span className="status-icon">{config.icon}</span>
-        {config.text}
-      </span>
-    );
-  };
+      const config = statusConfig[status] || statusConfig.draft;
+
+      return (
+        <span className={`status-badge ${config.class}`}>
+          <span className="status-icon">{config.icon}</span>
+          {config.text}
+        </span>
+      );
+    };
 
   if (isLoading) {
     return (
@@ -242,27 +255,53 @@ useEffect(() => {
 
                           <div className="doc-actions">
                             {doc.status === "completed" && (
-                              <Button
-                                size="small"
-                                onClick={() => handleDownload(doc.id)}
-                                disabled={downloadingId === doc.id}
-                              >
-                                {downloadingId === doc.id ? '⏳ Загрузка...' : '📥 Скачать'}
-                              </Button>
+                              <div className="doc-completed-block">
+
+                                <Button
+                                  size="small"
+                                  variant="primary"
+                                  onClick={() => handleDownload(doc.id)}
+                                  disabled={downloadingId === doc.id}
+                                >
+                                  {downloadingId === doc.id ? 'Документ скачан' : '⬇ Скачать документ'}
+                                </Button>
+                              </div>
                             )}
+
 
                             {doc.status === "draft" && (
-                              <Button
-                                size="small"
-                                variant="secondary"
-                                onClick={() => handleContinue(doc.id)}
-                              >
-                                ➕ Продолжить
-                              </Button>
-                            )}
+                              <div className="doc-draft-block">
 
+                                <Button
+                                  size="small"
+                                  variant="primary"
+                                  onClick={() => handleContinue(doc.id)}
+                                >
+                                  ➕ Продолжить оформление
+                                </Button>
+                              </div>
+                            )}
                             {doc.status === "error" && (
-                              <span className="doc-error">⚠ Ошибка</span>
+                              <div className="doc-error-block">
+
+                                <div className="doc-error-actions">
+                                  <Button
+                                    size="small"
+                                    variant="secondary"
+                                    onClick={() => handleContinue(doc.id)}
+                                  >
+                                    🔄 Попробовать снова
+                                  </Button>
+
+                                  <Button
+                                    size="small"
+                                    variant="text"
+                                    onClick={() => navigate('/')}
+                                  >
+                                    ➕ Новый документ
+                                  </Button>
+                                </div>
+                              </div>
                             )}
                           </div>
                         </div>

@@ -2,6 +2,7 @@ services:
   backend:
     build:
       context: ./backend
+      dockerfile: Dockerfile
     env_file:
       - ./backend/.env
     environment:
@@ -37,6 +38,7 @@ services:
     build:
       context: ./frontend
       target: development
+      dockerfile: dev.Dockerfile
     ports:
       - "5173:5173"
     volumes:

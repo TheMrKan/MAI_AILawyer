@@ -74,7 +74,7 @@ async def google_callback(
 
         if user_data is None:
             raise HTTPException(
-                status_code=500,
+                status_code=401,
                 detail="Google OAuth returned empty user data"
             )
 

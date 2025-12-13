@@ -71,6 +71,13 @@ async def google_callback(
 
     try:
         user_data = await google_oauth.get_user_info(code)
+
+        if user_data is None:
+            raise HTTPException(
+                status_code=401,
+                detail="Google OAuth returned empty user data"
+            )
+
         user_repo = scope[UserRepositoryABC]
         user = await user_repo.get_or_create(user_data)
         token_response = scope[AuthServiceABC].authenticate(user)

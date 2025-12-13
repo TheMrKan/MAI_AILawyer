@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated, Self
 import logging
 from enum import Enum
+from sqlalchemy import select
 
 from src.core.chats.service import IssueChatService, GraphError
 from src.application.provider import Provider, Scope
@@ -14,6 +15,7 @@ from src.core.results.iface import IssueResultFileStorageABC
 from src.core.issue_service import IssueService
 from src.exceptions import ExternalRateLimitException
 from src.core.users.types import UserInfo
+from src.storage.sql.models import Issue
 
 
 logger = logging.getLogger(__name__)

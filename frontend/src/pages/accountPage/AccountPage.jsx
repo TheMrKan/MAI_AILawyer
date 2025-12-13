@@ -5,7 +5,8 @@ import Footer from '../../components/Footer/Footer';
 import Button from '../../components/Button/Button';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import Modal from '../../components/Modal/Modal';
-import { userAPI } from '../../services/api';
+import { userAPI, issueAPI } from '../../services/api';
+import { motion, AnimatePresence } from "framer-motion";
 import './AccountPage.scss';
 
 const AccountPage = () => {
@@ -13,10 +14,25 @@ const AccountPage = () => {
   const [activeTab, setActiveTab] = useState('documents');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingDocuments, setLoadingDocuments] = useState(true);
+  const [downloadingId, setDownloadingId] = useState(null);
 
   // Данные пользователя
   const [userData, setUserData] = useState(null);
   const [documents, setDocuments] = useState([]);
+
+useEffect(() => {
+  const loadDocuments = async () => {
+    try {
+      const docs = await userAPI.getUserDocuments();
+      setDocuments(docs);
+    } finally {
+      setLoadingDocuments(false);
+    }
+  };
+
+  loadDocuments();
+}, []);
 
   // Загружаем данные пользователя
 useEffect(() => {
@@ -63,14 +79,38 @@ useEffect(() => {
     }
   };
 
-  const handleDownload = (documentId) => {
-    setIsLoading(true);
-    // Заглушка для скачивания
-    setTimeout(() => {
-      alert(`Документ ${documentId} скачивается...`);
-      setIsLoading(false);
-    }, 1000);
+  const handleDownload = async (issueId) => {
+      try {
+        setDownloadingId(issueId);
+
+        const response = await issueAPI.downloadDocument(issueId);
+
+        const blob = new Blob([response.data], {
+          type:
+            response.headers['content-type'] ||
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        });
+
+        const url = window.URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `document_${issueId}.docx`;
+
+        document.body.appendChild(link);
+        link.click();
+
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Download failed:', error);
+        alert(error.message || 'Не удалось скачать документ');
+      } finally {
+        setDownloadingId(null);
+      }
   };
+
+
 
   const handleContinue = (documentId) => {
     navigate(`/chat/${documentId}`);
@@ -142,106 +182,124 @@ useEffect(() => {
           </div>
         </div>
 
+
         {/* Контент табов */}
         <div className="tab-content">
-          {activeTab === 'documents' && (
-            <div className="documents-section">
-              <div className="section-header">
-                <h2>Мои документы</h2>
-                <Button
-                  onClick={() => navigate('/')}
-                  className="create-new-btn"
-                >
-                  ➕ Создать новый
-                </Button>
-              </div>
+          <AnimatePresence mode="wait">
+            {activeTab === 'documents' && (
+              <motion.div
+                key="documents"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="documents-section"
+              >
+                <div className="section-header">
+                  <h2>Мои документы</h2>
+                  <Button onClick={() => navigate('/')} className="create-new-btn">
+                    ➕ Создать новый
+                  </Button>
+                </div>
 
-              <div className="documents-grid">
-                {documents.length === 0 ? (
-                  <div className="empty-state">
-                    <div className="empty-icon">📄</div>
-                    <h3>У вас пока нет документов</h3>
-                    <p>Создайте свой первый документ, чтобы начать работу</p>
-                    <Button onClick={() => navigate('/')}>
-                      Создать документ
-                    </Button>
-                  </div>
-                ) : (
-                  documents.map(doc => (
-                    <div key={doc.id} className="document-card">
-                      <div className="document-header">
-                        <h3>{doc.title}</h3>
-                        {getStatusBadge(doc.status)}
+                <div className="documents-grid">
+                  {loadingDocuments ? (
+                    [...Array(4)].map((_, i) => (
+                      <div key={i} className="document-card skeleton">
+                        <div className="skeleton-title" />
+                        <div className="skeleton-line short" />
+                        <div className="skeleton-line long" />
+                        <div className="skeleton-footer" />
                       </div>
-                      <div className="document-info">
-                        <div className="info-item">
-                          <span className="label">Тип:</span>
-                          <span className="value">{doc.type}</span>
-                        </div>
-                        <div className="info-item">
-                          <span className="label">Получатель:</span>
-                          <span className="value">{doc.recipient}</span>
-                        </div>
-                        <div className="info-item">
-                          <span className="label">Дата создания:</span>
-                          <span className="value">{doc.date}</span>
-                        </div>
-                      </div>
-                      <div className="document-actions">
-                        <Button
-                          size="small"
-                          onClick={() => handleDownload(doc.id)}
-                        >
-                          📥 Скачать
-                        </Button>
-                        {doc.status === 'draft' && (
-                          <Button
-                            variant="secondary"
-                            size="small"
-                            onClick={() => handleContinue(doc.id)}
-                          >
-                            ➕ Продолжить
-                          </Button>
-                        )}
-                      </div>
+                    ))
+                  ) : documents.length === 0 ? (
+                    <div className="empty-state">
+                      <div className="empty-icon">📄</div>
+                      <h3>Документов пока нет</h3>
+                      <p>
+                        Создай первый документ — мы поможем оформить его правильно
+                      </p>
+
+                      <Button
+                        size="large"
+                        onClick={() => navigate('/')}
+                      >
+                        ➕ Создать документ
+                      </Button>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
+                  ) : (
+                    documents.map(doc => (
+                      <div key={doc.id} className="document-card modern">
+                        <div className="doc-top">
+                          <h3 className="doc-title">{doc.title}</h3>
+                          {getStatusBadge(doc.status)}
+                        </div>
 
+                        <p className="chatgpt-preview">{doc.text_preview}</p>
 
+                        <div className="doc-footer">
+                          <div className="doc-date">📅 {doc.date}</div>
 
-          {activeTab === 'settings' && (
-            <div className="settings-section">
-              <h2>Настройки аккаунта</h2>
-              <div className="settings-grid">
-                <div className="setting-item">
-                  <h3>Уведомления</h3>
-                  <p>Настройте получение уведомлений о статусе документов</p>
-                  <Button variant="secondary" size="small">
-                    Настроить
-                  </Button>
+                          <div className="doc-actions">
+                            {doc.status === "completed" && (
+                              <Button
+                                size="small"
+                                onClick={() => handleDownload(doc.id)}
+                                disabled={downloadingId === doc.id}
+                              >
+                                {downloadingId === doc.id ? '⏳ Загрузка...' : '📥 Скачать'}
+                              </Button>
+                            )}
+
+                            {doc.status === "draft" && (
+                              <Button
+                                size="small"
+                                variant="secondary"
+                                onClick={() => handleContinue(doc.id)}
+                              >
+                                ➕ Продолжить
+                              </Button>
+                            )}
+
+                            {doc.status === "error" && (
+                              <span className="doc-error">⚠ Ошибка</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
-                <div className="setting-item">
-                  <h3>Безопасность</h3>
-                  <p>Измените пароль и настройки безопасности</p>
-                  <Button variant="secondary" size="small">
-                    Обновить
-                  </Button>
+              </motion.div>
+            )}
+
+            {activeTab === 'settings' && (
+              <motion.div
+                key="settings"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="settings-section"
+              >
+                <h2>Настройки аккаунта</h2>
+
+                <div className="settings-grid">
+                  <div className="setting-item">
+                    <h3>Уведомления</h3>
+                    <p>Настройка уведомлений и уведомлений на email.</p>
+                  </div>
+
+                  <div className="setting-item">
+                    <h3>Безопасность</h3>
+                    <p>Изменить пароль или просмотреть активные устройства.</p>
+                  </div>
                 </div>
-                <div className="setting-item">
-                  <h3>Экспорт данных</h3>
-                  <p>Скачайте все ваши документы и данные</p>
-                  <Button variant="secondary" size="small">
-                    Экспортировать
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
+
       </div>
 
       <Footer />

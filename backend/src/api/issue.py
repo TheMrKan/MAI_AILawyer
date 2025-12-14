@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +16,7 @@ from src.core.issue_service import IssueService
 from src.exceptions import ExternalRateLimitException
 from src.core.users.types import UserInfo
 from src.storage.sql.models import Issue
+from src.core.users.iface import AuthServiceABC, UserRepositoryABC
 
 
 logger = logging.getLogger(__name__)
@@ -101,10 +102,11 @@ class IssueCreateRequestSchema(BaseModel):
 
 @router.post('/create/')
 async def create_issue(
-        issue_data: IssueCreateRequestSchema,
-        scope: Scope = Depends(get_scope),
-        db: AsyncSession = Depends(get_db_session),
-        current_user=Depends(get_current_user)
+    issue_data: IssueCreateRequestSchema,
+    response: Response,
+    scope: Scope = Depends(get_scope),
+    db: AsyncSession = Depends(get_db_session),
+    current_user=Depends(get_current_user)
 ) -> IssueSchema:
     """
     Создает новый issue в БД и чат к нему.
@@ -115,9 +117,22 @@ async def create_issue(
 
     scope.set_scoped_value(db, AsyncSession)
 
+    auth_service = scope[AuthServiceABC]
+    user_repo = scope[UserRepositoryABC]
     issue_service = scope[IssueService]
+
+    user = current_user
+
+    if not user:
+        user = await user_repo.create_anonymous()
+        auth_token = auth_service.authenticate(user)
+
+        response.headers["X-Auth-Token"] = auth_token.access_token
+        response.headers["X-Anonymous"] = "true"
+
+        logger.info(f"Anonymous user created: {user.id}")
     try:
-        new_issue = await issue_service.create_issue(issue_data.text, current_user.id if current_user else None)
+        new_issue = await issue_service.create_issue(issue_data.text, user.id)
         chat_service = scope[IssueChatService]
         await chat_service.process_new_user_message(new_issue.id, issue_data.text)
         logger.info(f"New issue created: {new_issue.text}")

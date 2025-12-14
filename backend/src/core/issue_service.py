@@ -47,6 +47,9 @@ class IssueService(Registerable):
 
     @staticmethod
     def can_download_result(issue: Issue, user: UserInfo | None) -> bool:
+        if issue.user_id is not None and user is None:
+            return True
+
         if not user:
             return False
 

@@ -98,43 +98,35 @@ const HomePage = () => {
   }, [currentUser]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+      e.preventDefault();
 
-    if (!problemDescription.trim()) {
-      alert('Пожалуйста, опишите вашу проблему');
-      return;
-    }
-
-    // Если пользователь не авторизован, показываем модалку
-    if (!currentUser) {
-      setShowAuthModal(true);
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const response = await issueAPI.createIssue(problemDescription);
-      navigate(`/chat/${response.issue_id}`);
-    } catch (error) {
-      console.error('Error creating issue:', error);
-
-      // Если ошибка авторизации, разлогиниваем и просим авторизоваться снова
-      if (error.message.includes('401') || error.message.includes('токен')) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
-        setCurrentUser(null);
-        setShowAuthModal(true);
-        alert('Сессия истекла. Пожалуйста, войдите снова.');
-      } else if (error.name === "RateLimitError") {
-        alert("Использование нашего сервиса полностью бесплатно, поэтому мы вынуждены экономить. Один из сервисов сейчас не справляется, пожалуйста, попробуйте позднее.");
-      } else {
-        alert('Произошла ошибка при создании запроса. Пожалуйста, попробуйте снова.');
+      if (!problemDescription.trim()) {
+        alert('Пожалуйста, опишите вашу проблему');
+        return;
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
+      setIsLoading(true);
+
+      try {
+        const response = await issueAPI.createIssue(problemDescription);
+        navigate(`/chat/${response.issue_id}`);
+      } catch (error) {
+        console.error('Error creating issue:', error);
+
+        if (error.name === "RateLimitError") {
+          alert(
+            "Использование нашего сервиса полностью бесплатно, " +
+            "поэтому мы вынуждены экономить. Попробуйте позднее."
+          );
+        } else {
+          alert(
+            'Произошла ошибка при создании запроса. Пожалуйста, попробуйте снова.'
+          );
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
   const handleQuickStart = (example) => {
     setProblemDescription(example);
@@ -217,7 +209,7 @@ const HomePage = () => {
                   placeholder="Например: 'Меня принуждают к переработкам без соответствующей компенсации, какую жалобу написать на начальника????'"
                   className="problem-textarea"
                   rows="8"
-                  disabled={isLoading || !currentUser}
+                  disabled={isLoading}
                 />
                 <div className="textarea-footer">
                   <span className="char-count">
@@ -237,29 +229,22 @@ const HomePage = () => {
               </div>
 
                 {!currentUser && (
-                <div className="auth-notice" style={{ marginBottom: '20px', textAlign: 'center' }}>
-                  <span>⚠️ Для создания документов требуется авторизация</span>
-                </div>
-              )}
+                  <div className="auth-notice" style={{ marginBottom: '20px', textAlign: 'center' }}>
+                    <span>
+                      🔓 Вы можете начать без регистрации. Войти через Google можно позже.
+                    </span>
+                  </div>
+                )}
 
-              {currentUser ? (
-                <Button
-                  type="submit"
-                  loading={isLoading}
-                  disabled={isLoading || !problemDescription.trim()}
-                  className="submit-button"
-                >
-                  {isLoading ? 'Обработка...' : 'Создать документ'}
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={() => setShowAuthModal(true)}
-                  className="submit-button"
-                >
-                  Войти для создания документа
-                </Button>
+
+             <Button
+              type="submit"
+              loading={isLoading}
+              disabled={isLoading || !problemDescription.trim()}
+              className="submit-button"
+            >
+              {isLoading ? 'Обработка...' : 'Создать документ'}
+            </Button>
               )}
             </form>
 

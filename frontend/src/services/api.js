@@ -26,41 +26,62 @@ api.interceptors.response.use(
     console.error('API Error:', error);
 
     if (error.response?.status === 401) {
+      const hadToken = !!localStorage.getItem('auth_token');
+
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user');
-      window.location.href = '/signin';
+
+      // ❗ Редирект ТОЛЬКО если был реальный логин
+      if (hadToken) {
+        window.location.href = '/signin';
+      }
+
+      // ❗ Для анонимов просто пробрасываем ошибку
+      return Promise.reject(error);
     }
 
     if (error.response?.status === 429) {
-      throw {name: "RateLimitError", message: ""};
+      throw { name: "RateLimitError", message: "" };
     }
 
     if (error.response) {
-      // Сервер от ветил  с ошибкой пример
-      const message = error.response.data?.detail || 'Произошла ошибка сервера';
-      throw new Error(message);
-    } else if (error.request) {
-      // Запрос был сделан, но ответ не получен  пример
-      throw new Error('Не удалось подключиться к серверу. Проверьте подключение к интернету.');
-    } else {
-      // Что-то по шло не так при настройке з апроса
-      throw new Error('Произошла непредвиденная ошибка');
+      throw new Error(
+        error.response.data?.detail || 'Произошла ошибка сервера'
+      );
     }
+
+    if (error.request) {
+      throw new Error('Нет соединения с сервером');
+    }
+
+    throw new Error('Неизвестная ошибка');
   }
 );
 
+
 export const issueAPI = {
-  // новый issue
   async createIssue(description) {
-    try {
-      // Временно генерируем случайный ID, пока бэкенд не реализует создание ЕГорррррр
-      const response = await api.post("/issue/create/", { "text": description });
-      return { issue_id: response.data["issue_id"] };
-    } catch (error) {
-      console.error('Error creating issue:', error);
-      throw error;
+  const response = await api.post("/issue/create/", { text: description });
+
+  const token = response.headers['x-auth-token'];
+  const isAnonymous = response.headers['x-anonymous'] === 'true';
+
+  if (token) {
+    localStorage.setItem('auth_token', token);
+    api.defaults.headers.Authorization = `Bearer ${token}`;
+
+    if (isAnonymous) {
+      const anonUser = {
+        id: null,
+        name: 'Гость',
+        isAnonymous: true,
+      };
+      localStorage.setItem('user', JSON.stringify(anonUser));
     }
-  },
+  }
+
+  return { issue_id: response.data.issue_id };
+},
 
   // Отправка сообщения в чат
   async sendMessage(issueId, text) {

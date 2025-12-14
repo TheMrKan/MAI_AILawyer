@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 import logging
 from pydantic import BaseModel, ConfigDict
 from pydantic.types import UUID4
+from typing import Optional
 
 from src.api.deps import get_current_user, get_scope
 from src.core.users.types import UserInfo
@@ -9,6 +10,7 @@ from src.core.users.types import UserInfo
 from src.core.issue_service import IssueService
 from src.core.chats.service import IssueChatService
 from src.application.provider import Scope
+from src.core.users.iface import AuthServiceABC
 
 
 logger = logging.getLogger(__name__)
@@ -23,16 +25,30 @@ class ProfileResponse(BaseModel):
     first_name: str
     last_name: str
     avatar_url: str
+    auth_token: Optional[str] = None
 
-
-@router.get("/me", response_model=ProfileResponse)
+@router.get("/me", response_model=ProfileResponse | None)
 async def get_my_profile(
-        current_user: UserInfo = Depends(get_current_user)
+    request: Request,
+    current_user: UserInfo = Depends(get_current_user),
+    scope: Scope = Depends(get_scope),
 ):
-    if current_user:
-        return ProfileResponse.model_validate(current_user)
+    if not current_user:
+        raise HTTPException(status_code=401)
 
-    raise HTTPException(status_code=403)
+    profile = ProfileResponse.model_validate(current_user)
+
+    auth_header = request.headers.get("authorization")
+    has_token = auth_header and auth_header.startswith("Bearer ")
+
+    if not has_token:
+        auth_service = scope[AuthServiceABC]
+        auth_token = auth_service.authenticate(current_user)
+
+        profile.auth_token = auth_token.access_token
+
+    return profile
+
 
 
 

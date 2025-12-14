@@ -1,6 +1,8 @@
+from httptools.parser.parser import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 import uuid
+from uuid import uuid4
 
 from src.storage.sql.models import User
 from src.core.users.iface import UserRepositoryABC
@@ -80,3 +82,22 @@ class UserRepository(UserRepositoryABC, Registerable):
             return user
 
         return await self.create(user_data)
+
+    async def create_anonymous(self) -> UserInfo:
+        anon_id = uuid4()
+
+        user = User(
+            id=anon_id,
+            email=f"anon_{anon_id}@anon.local",
+            sso_provider="anonymous",
+            sso_id=str(anon_id),
+            first_name="Гость",
+            last_name="",
+            avatar_url="",
+        )
+
+        self.db.add(user)
+        await self.db.flush()
+        await self.db.refresh(user)
+
+        return UserInfo.model_validate(user)

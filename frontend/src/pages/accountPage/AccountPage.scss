@@ -747,3 +747,93 @@
     max-width: 420px;
   }
 }
+/* =====================
+   DRAFT CARD
+===================== */
+
+.document-card.draft {
+  border: 1px dashed #c7d2fe;
+  background: linear-gradient(180deg, #f8faff, #ffffff);
+  position: relative;
+}
+
+/* subtle pulse line */
+.document-card.draft::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(99, 102, 241, 0.08),
+    transparent
+  );
+  animation: draftGlow 2.5s infinite;
+}
+
+@keyframes draftGlow {
+  0% { opacity: 0 }
+  50% { opacity: 1 }
+  100% { opacity: 0 }
+}
+
+/* TEXT */
+.doc-draft-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.doc-draft-text {
+  font-size: 0.9rem;
+  color: #4338ca;
+  font-weight: 500;
+  line-height: 1.4;
+
+  span {
+    display: block;
+    font-weight: 400;
+    color: #6366f1;
+    margin-top: 2px;
+  }
+}
+
+/* BADGE */
+.status-badge.status-draft {
+  background: #eef2ff;
+  color: #3730a3;
+  border: 1px dashed #a5b4fc;
+}
+
+/* SUCCESS CARD */
+.document-card.completed {
+  border: 1px solid #c6f6d5;
+  background: linear-gradient(180deg, #f6fffa, #ffffff);
+}
+
+/* SUCCESS TEXT */
+.doc-completed-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.doc-success-text {
+  font-size: 0.9rem;
+  color: #137333;
+  font-weight: 500;
+}
+
+/* STATUS BADGE */
+.status-badge.status-completed {
+  background: #e6fffa;
+  color: #0f5132;
+  border: 1px solid #b2f5ea;
+}
+
+
+
+
+
+

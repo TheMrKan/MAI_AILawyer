@@ -11,6 +11,7 @@ from src.api.issue import router as issue_router
 from src.api.laws import router as laws_router
 from src.api.auth import router as auth_router
 from src.api.profile import router as profile_router
+from src.api.utils import router as utils_router
 from src.application import provider
 
 load_dotenv()
@@ -30,6 +31,7 @@ async def lifespan(_app: FastAPI):
     _app.include_router(laws_router)
     _app.include_router(auth_router)
     _app.include_router(profile_router)
+    _app.include_router(utils_router)
 
     yield
 

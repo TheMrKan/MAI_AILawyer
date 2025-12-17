@@ -19,9 +19,18 @@ services:
       - "./backend/templates:/app/templates"
       - "./backend/results:/app/results"
     restart: no
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
     depends_on:
-      - chroma
-      - postgres
+      postgres:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+
 
   postgres:
     image: postgres:15
@@ -33,6 +42,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build:
@@ -59,6 +73,11 @@ services:
       - "8000"
     ports:
       - "8004:8000"
+    healthcheck:
+      test: [ "CMD", "/bin/bash", "-c", "cat < /dev/null > /dev/tcp/localhost/8000" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   chroma-data:

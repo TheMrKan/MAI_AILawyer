@@ -32,7 +32,7 @@ def mock_db_session():
 
 @pytest.fixture(scope="function")
 def client(mock_db_session):
-    from src.database.connection import get_db
+    from src.storage.sql.connection import get_session
 
     async def override_get_db():
         try:
@@ -40,7 +40,7 @@ def client(mock_db_session):
         finally:
             await mock_db_session.close()
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_session] = override_get_db
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()

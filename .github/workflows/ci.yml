@@ -7,13 +7,39 @@ on:
     branches: [ master ]
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Chekout
+        uses: actions/checkout@v4
 
-      - run: |
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.10"
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip setuptools wheel
+          pip install poetry
+          poetry config virtualenvs.create false
+          poetry install --with test -v
+
+      - name: Run Tests
+        run: cd backend && pytest
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Chekout
+        uses: actions/checkout@v4
+
+      - name: Build and push
+        run: |
           docker build ./backend -t ${{ secrets.BACKEND_IMAGE }} && \
           docker login docker.io -u "${{ secrets.DOCKERHUB_USER }}" -p "${{ secrets.DOCKERHUB_TOKEN }}" && \
           docker push ${{ secrets.BACKEND_IMAGE }}
